@@ -2,6 +2,8 @@
 
 用代码和 AI 做 YouTube 视频：竖屏 Shorts 或横屏长视频。画面是 HTML + SVG 页面，由时间 `t` 决定每一帧；旁白生成后排出时间轴，画面上的每个动作都挂在旁白的某个词上；渲染器逐帧截图，编码成 H.264 视频。
 
+环境没装好（没有 `node_modules/` 或 `kit/.fonts/`）时，先告诉用户并运行 `bash scripts/setup.sh`（会下载 Playwright、Chromium、Python 依赖和字体）。
+
 先读 [docs/workflow.md](docs/workflow.md)（流程与标准），写页面时再查 [kit/README.md](kit/README.md)（函数与工具）。`videos/` 里是完整的示例视频，只用来参考写法，不代表用户的频道定位。
 
 ## 开工前：读频道设定

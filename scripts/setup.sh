@@ -17,9 +17,10 @@ if [ -n "${PYTHON:-}" ]; then
   PY=$PYTHON
   "$PY" -c "import sherpa_onnx" 2>/dev/null || echo "warn: sherpa-onnx missing in $PY; read-back check and Kokoro voice are skipped" >&2
 else
-  [ -x .venv/bin/python ] || python3 -m venv .venv
-  PY=.venv/bin/python
-  .venv/bin/pip install -q --disable-pip-version-check -r requirements.txt
+  # Windows venvs put the interpreter in Scripts/, elsewhere in bin/.
+  [ -x .venv/bin/python ] || [ -x .venv/Scripts/python.exe ] || "$(command -v python3 || command -v python)" -m venv .venv
+  PY=.venv/bin/python; [ -x "$PY" ] || PY=.venv/Scripts/python.exe
+  "$PY" -m pip install -q --disable-pip-version-check -r requirements.txt
 fi
 
 # Fonts (git-ignored): Noto Sans SC and TC Bold/Black (Latin + CJK) and ZCOOL KuaiLe.

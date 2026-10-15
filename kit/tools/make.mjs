@@ -18,9 +18,11 @@
 //   --skip-voice  reuse the existing timeline and narration (e.g. after editing only the page)
 //   --draft       stop after the contact sheet (no render)
 //   --from/--to   render a window only (no video check)
-// Environment: PLAYWRIGHT_MODULE / CHROMIUM / FFMPEG as the kit tools; PYTHON (default .venv/bin/python, else python3);
+// Environment: PLAYWRIGHT_MODULE / CHROMIUM / FFMPEG as the kit tools; PYTHON (default the .venv interpreter, else python3,
+// python on Windows);
 // VIDEO_MODELS for the offline models.
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { parseArgs } from 'node:util';
@@ -28,9 +30,10 @@ import { fileURLToPath } from 'node:url';
 
 const TOOLS = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(TOOLS, '..', '..');
-const venvPy = path.join(ROOT, '.venv', 'bin', 'python');
-const PY = process.env.PYTHON || (fs.existsSync(venvPy) ? venvPy : 'python3');
-const MODELS = process.env.VIDEO_MODELS || path.join(process.env.HOME || '', '.cache', 'ai-video-workflow', 'models');
+const WIN = process.platform === 'win32';
+const venvPy = WIN ? path.join(ROOT, '.venv', 'Scripts', 'python.exe') : path.join(ROOT, '.venv', 'bin', 'python');
+const PY = process.env.PYTHON || (fs.existsSync(venvPy) ? venvPy : WIN ? 'python' : 'python3');
+const MODELS = process.env.VIDEO_MODELS || path.join(os.homedir(), '.cache', 'ai-video-workflow', 'models');
 
 const { values: o, positionals } = parseArgs({ allowPositionals: true, options: {
   voice: { type: 'string' }, 'skip-voice': { type: 'boolean', default: false }, draft: { type: 'boolean', default: false },

@@ -94,7 +94,7 @@ DOM 加内联 SVG，1080×1920 竖屏或 1920×1080 横屏画框，纸张颗粒�
 - `PLAYWRIGHT_MODULE`：可选，默认用仓库里装的 playwright；
 - `CHROMIUM`：浏览器路径；
 - `FFMPEG`：带 libx264 的 ffmpeg；
-- `PYTHON`：默认 `.venv/bin/python`；
+- `PYTHON`：默认 `.venv` 里的 Python（Windows 是 `.venv/Scripts/python.exe`）；
 - `VIDEO_MODELS`：离线模型目录；
 - 用 API 配音时：`video.json` 的 `voice.keyEnv` 指定的环境变量存密钥。
 
