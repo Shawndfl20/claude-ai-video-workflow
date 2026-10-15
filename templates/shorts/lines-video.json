@@ -1,0 +1,6 @@
+[
+ {"s": "hook", "t": "This is the hook. Say the surprising thing in the first two seconds."},
+ {"s": "hook", "t": "Then promise what the viewer will understand by the end."},
+ {"s": "point", "t": "One scene, one idea. The picture shows what the line says.", "hold": 0.3},
+ {"s": "end", "t": "Close the loop: the last line should lead back to the first."}
+]

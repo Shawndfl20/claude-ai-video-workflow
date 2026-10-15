@@ -1,0 +1,6 @@
+[
+ {"s": "hook", "t": "This is the hook. Say the surprising thing in the first few seconds."},
+ {"s": "hook", "t": "Then promise what the viewer will be able to do by the end."},
+ {"s": "point", "t": "One scene, one idea. The picture shows what the line says.", "hold": 0.3},
+ {"s": "end", "t": "Close with a one-line summary and point to the next video to watch."}
+]

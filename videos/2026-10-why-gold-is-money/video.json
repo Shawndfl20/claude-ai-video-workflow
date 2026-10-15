@@ -1,0 +1,8 @@
+{
+  "page": "gold.html",
+  "lines": "lines-gold.json",
+  "voice": { "provider": "hume" },
+  "poster": 0.9,
+  "maxSeconds": 180,
+  "workers": 4
+}

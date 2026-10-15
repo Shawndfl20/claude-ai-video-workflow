@@ -1,0 +1,122 @@
+{
+ "total": 83.031,
+ "lines": [
+  {
+   "s": "hook",
+   "t": "There are 118 elements. Humans picked this one to be money.",
+   "d": 3.403,
+   "start": 0.8,
+   "end": 4.203
+  },
+  {
+   "s": "hook",
+   "t": "Why this one? Let's run the tournament.",
+   "d": 2.109,
+   "start": 4.503,
+   "end": 6.612
+  },
+  {
+   "s": "gas",
+   "t": "Round one: gases. Open your wallet, and your savings float away.",
+   "d": 4.241,
+   "start": 7.512,
+   "end": 11.753
+  },
+  {
+   "s": "liquid",
+   "t": "Liquids are out too. Mercury money slips through your fingers, and it's toxic.",
+   "d": 4.156,
+   "start": 12.653,
+   "end": 16.809
+  },
+  {
+   "s": "hot",
+   "t": "Next, the hotheads. Sodium and potassium react violently with water. Good luck on a rainy payday.",
+   "d": 6.221,
+   "start": 17.709,
+   "end": 23.93
+  },
+  {
+   "s": "glow",
+   "t": "Radioactive elements? Your wallet would glow. So would you.",
+   "hold": 0.3,
+   "d": 4.113,
+   "start": 24.83,
+   "end": 28.943
+  },
+  {
+   "s": "rust",
+   "t": "Iron rusts. Money that rots in your pocket? Out, along with most of the table.",
+   "d": 5.053,
+   "start": 30.143,
+   "end": 35.196
+  },
+  {
+   "s": "rare",
+   "t": "Some metals are just too rare to go around. Rhodium wasn't even discovered until 1804.",
+   "d": 5.558,
+   "start": 36.096,
+   "end": 41.654
+  },
+  {
+   "s": "final",
+   "t": "That leaves the final three: platinum, silver, and gold.",
+   "d": 2.734,
+   "start": 42.554,
+   "end": 45.288
+  },
+  {
+   "s": "final",
+   "t": "Platinum melts at nearly 1,800 degrees Celsius. No ancient furnace came close.",
+   "d": 5.244,
+   "start": 45.588,
+   "end": 50.832
+  },
+  {
+   "s": "final",
+   "t": "Silver was money for centuries too, but it tarnishes black.",
+   "d": 3.251,
+   "start": 51.132,
+   "end": 54.383
+  },
+  {
+   "s": "win",
+   "t": "Gold melts in a simple furnace, never rusts, and is rare, but not too rare.",
+   "hold": 0.5,
+   "d": 4.381,
+   "start": 55.283,
+   "end": 59.664
+  },
+  {
+   "s": "win",
+   "t": "Tutankhamun's mask still shines after 3,300 years.",
+   "hold": 0.3,
+   "d": 4.006,
+   "start": 60.464,
+   "end": 64.47
+  },
+  {
+   "s": "star",
+   "t": "Why so rare? Much of it was likely forged when two dead stars collided.",
+   "d": 3.974,
+   "start": 65.67,
+   "end": 69.644
+  },
+  {
+   "s": "cube",
+   "t": "All the gold ever mined would fit in one cube, about 22 meters on each side.",
+   "hold": 0.3,
+   "d": 4.512,
+   "start": 70.544,
+   "end": 75.056
+  },
+  {
+   "s": "end",
+   "t": "117 elements tried out. Only one became money.",
+   "d": 3.775,
+   "start": 76.256,
+   "end": 80.031
+  }
+ ],
+ "voice": "voice-gold.wav"
+}

@@ -1,0 +1,18 @@
+[
+ {"s": "hook", "t": "There are 118 elements. Humans picked this one to be money."},
+ {"s": "hook", "t": "Why this one? Let's run the tournament."},
+ {"s": "gas", "t": "Round one: gases. Open your wallet, and your savings float away."},
+ {"s": "liquid", "t": "Liquids are out too. Mercury money slips through your fingers, and it's toxic."},
+ {"s": "hot", "t": "Next, the hotheads. Sodium and potassium react violently with water. Good luck on a rainy payday."},
+ {"s": "glow", "t": "Radioactive elements? Your wallet would glow. So would you.", "hold": 0.3},
+ {"s": "rust", "t": "Iron rusts. Money that rots in your pocket? Out, along with most of the table."},
+ {"s": "rare", "t": "Some metals are just too rare to go around. Rhodium wasn't even discovered until 1804."},
+ {"s": "final", "t": "That leaves the final three: platinum, silver, and gold."},
+ {"s": "final", "t": "Platinum melts at nearly 1,800 degrees Celsius. No ancient furnace came close."},
+ {"s": "final", "t": "Silver was money for centuries too, but it tarnishes black."},
+ {"s": "win", "t": "Gold melts in a simple furnace, never rusts, and is rare, but not too rare.", "hold": 0.5},
+ {"s": "win", "t": "Tutankhamun's mask still shines after 3,300 years.", "hold": 0.3},
+ {"s": "star", "t": "Why so rare? Much of it was likely forged when two dead stars collided."},
+ {"s": "cube", "t": "All the gold ever mined would fit in one cube, about 22 meters on each side.", "hold": 0.3},
+ {"s": "end", "t": "117 elements tried out. Only one became money."}
+]

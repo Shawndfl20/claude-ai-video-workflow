@@ -1,0 +1,469 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Why Is Gold Money?</title>
+<link rel="stylesheet" href="../../kit/styles/handdrawn/shell.css">
+<style>
+  #frame { --grain: .12; --vignette: rgba(0, 0, 0, .35); --film-top: 1700px; }
+  .lab { position: absolute; font-family: "NotoSC", sans-serif; font-weight: 900; white-space: nowrap; line-height: 1; color: #fff;
+         letter-spacing: .02em; -webkit-text-stroke: 8px #11142a; paint-order: stroke fill; }
+  .lab.c { transform: translateX(-50%); }
+  .pill { position: absolute; font-family: "NotoSC", sans-serif; font-weight: 900; white-space: nowrap; line-height: 1;
+          background: #fff; border: 6px solid #1b1e2e; border-radius: 999px; padding: 14px 30px; color: #1b1e2e; }
+  .glow { position: absolute; border-radius: 50%; }
+  .beam { position: absolute; background: linear-gradient(rgba(255, 244, 200, .55), rgba(255, 244, 200, 0)); clip-path: polygon(42% 0, 58% 0, 100% 100%, 0 100%); }
+  .tile { position: absolute; transform-origin: 50% 100%; }
+</style>
+</head>
+<body>
+<script src="../../kit/core/anim.js"></script>
+<script src="../../kit/core/timeline.js"></script>
+<script src="../../kit/core/captions.js"></script>
+<script src="../../kit/core/page.js"></script>
+<script src="../../kit/styles/handdrawn/shell.js"></script>
+<script src="../../kit/styles/handdrawn/art.js"></script>
+<script src="../../kit/styles/handdrawn/motion.js"></script>
+<script src="art-gold.js"></script>
+<script>
+/* Why is gold money? A 118-element tournament (about 80 s, English Shorts).
+   The periodic table is the scoreboard: it stays on screen through six rounds, each round knocking out a group the way
+   that group would fail as money (gases float off, liquids melt, hotheads burn, radioactives glow, the rest rust, the
+   rarest shrink away). The lower half plays each round's joke. Then a final of three, gold wins, why it is rare (dead
+   stars), how little there is (one cube), and back to the opening board so the Short loops. */
+
+const STAGE = "radial-gradient(900px 900px at 50% 40%, #272f55, #1d2340)";
+buildShell({ bg: STAGE, caption: { style: "film", maxLines: 1 } });
+defineScenes();
+const LAYER = makeSceneLayers();
+// the round jokes play in the lower half, under the scoreboard: draw them a bit larger
+["gas", "liquid", "hot", "glow", "rust", "rare"].forEach((k) => Object.assign(LAYER[k].style, { transform: "scale(1.25)", transformOrigin: "540px 1150px" }));
+const chunks = makeChunks({ maxChars: 14, plain: true, hardBreaks: true });
+const BG = { star: "radial-gradient(900px 900px at 50% 45%, #1a1f45, #07081a)" };
+
+/* ---------------- beats ---------------- */
+const LS = (s, n = 0) => { let c = 0; for (let i = 0; i < N; i++) if (TL.lines[i].s === s && c++ === n) return i; throw new Error(`no line ${s}#${n}`); };
+const CC = (s) => s.replace(/[^A-Za-z0-9]/g, "").length;
+/** When the narration reaches `word` in line i (share of letters before it), plus a small lag. */
+const W = (i, word, lag = .2) => {
+  const t = TL.lines[i].t, k = t.toLowerCase().indexOf(word.toLowerCase());
+  if (k < 0) throw new Error(`line ${i} has no "${word}"`);
+  return at(i, Math.min(D(i) - .05, D(i) * CC(t.slice(0, k)) / CC(t) + lag));
+};
+const HK = [LS("hook"), LS("hook", 1)], GA = LS("gas"), LQ = LS("liquid"), HO = LS("hot"), GL = LS("glow"), RU = LS("rust"), RA = LS("rare");
+const FI = [0, 1, 2].map((n) => LS("final", n)), WI = [0, 1].map((n) => LS("win", n)), ST = LS("star"), CU = LS("cube"), EN = LS("end");
+
+const SFX = [];
+const cue = (t, kind, gain = 1) => { SFX.push([+t.toFixed(3), kind, gain]); return t; };
+window.SFX = SFX;
+
+/* ---------------- builders ---------------- */
+const lab = (parent, text, size, x, y, { color = "#fff", align = "" } = {}) => {
+  const d = el("div", "lab " + align, parent, text);
+  d.style.fontSize = size + "px"; d.style.color = color;
+  return place(d, x, y);
+};
+const pill = (parent, text, x, y, { color = G.ink, size = 56, bg = "#fff" } = {}) => {
+  const d = el("div", "pill", parent, text);
+  Object.assign(d.style, { fontSize: size + "px", color, borderColor: G.ink, background: bg });
+  return place(d, x, y);
+};
+const halo = (parent, x, y, r, rgb = "255,214,90") => { const g = el("div", "glow", parent); Object.assign(g.style, { width: 2 * r + "px", height: 2 * r + "px", background: `radial-gradient(closest-side, rgba(${rgb},.8), rgba(${rgb},0))` }); return place(g, x - r, y - r); };
+const art = (parent, w, h, svg, x, y, size, origin = "50% 50%") => put(parent, w, h, svg, x, y, { size: size || [w, h], origin });
+const tileBig = (parent, sym, fill, x, y, s, moods = ["happy"], num = null) => moodStack(parent, 100, 100, (m) => tileArt(sym, fill, m, { num }), moods, x, y, { size: [s, s], origin: "50% 100%" });
+const tints = (c) => c.querySelectorAll(".tint");
+const setTint = (c, color, a) => tints(c).forEach((r) => { r.setAttribute("fill", color); r.setAttribute("opacity", a); });
+
+function popE(e, t, a0, a1 = 1e9, { s = 1, x = 0, y = 0, rot = 0, dur = .4, out = .3 } = {}) {
+  const p = Math.max(pop(t, a0, dur), 0), o = clamp(p) * (1 - prog(t, a1, out));
+  tf(e, o, `translate(${x}px, ${y}px) scale(${p * s}) rotate(${rot}deg)`);
+  return o;
+}
+function fadeE(e, t, a0, a1 = 1e9, transform = "", d = .3) { const o = prog(t, a0, d) * (1 - prog(t, a1, d)); tf(e, o, transform); return o; }
+const shake = (t, a0, d = .5, amp = 10) => { const k = prog(t, a0, d); return k > 0 && k < 1 ? Math.sin(t * 70) * amp * (1 - k) : 0; };
+function KF(t, pts) {
+  if (t <= pts[0][0]) return pts[0][1];
+  for (let i = 1; i < pts.length; i++) if (t <= pts[i][0]) {
+    const [a, va] = pts[i - 1], [b, vb] = pts[i], k = eio((t - a) / Math.max(b - a, 1e-6));
+    return typeof va === "number" ? lerp(va, vb, k) : va.map((v, j) => lerp(v, vb[j], k));
+  }
+  return pts[pts.length - 1][1];
+}
+
+/* ================= the scoreboard: a persistent periodic table above the scene layers ================= */
+const PITCH = 58, TS = 54, BW = 18 * PITCH - 4, BH = 9 * PITCH + 20;
+const OUT = {
+  gas: cue(W(GA, "float away", 0), "whoosh"), liquid: cue(W(LQ, "slips", 0), "drip"), hot: cue(W(HO, "violently", 0), "boom"),
+  glow: cue(W(GL, "would glow", 0), "hum"), rust: cue(W(RU, "along with", -.1), "rattle"), rare: cue(W(RA, "too rare", 0), "pop"),
+};
+const boardLayer = el("div", "abs"); SHELL.frame.insertBefore(boardLayer, SHELL.vig);
+Object.assign(boardLayer.style, { left: "0px", top: "0px", width: "1080px", height: "1920px" });
+const board = el("div", "abs", boardLayer); board.style.width = BW + "px"; board.style.height = BH + "px"; board.style.transformOrigin = "520px 0px";
+const auHalo = halo(board, 0, 0, 170);
+const TILES = SYM.map((sym, i) => {
+  const z = i + 1, [c, r] = cell(z), round = roundOf(z);
+  const d = art(board, 100, 100, tileArt(sym, TILE_FILL[round], z === 79 ? "smug" : "happy"), c * PITCH, r < 7 ? r * PITCH : r * PITCH + 20, [TS, TS], "50% 100%");
+  d.className = "tile abs";
+  const tint = round === "hot" ? "#2a2222" : round === "glow" ? "#7dff6a" : G.rustBrown;
+  setTint(d, tint, 0);
+  return { d, z, c, r, round, seed: hash(z * 7.3) };
+});
+const AU = TILES[78];
+place(auHalo, AU.c * PITCH + TS / 2 - 170, AU.r * PITCH + TS / 2 - 170);
+// HUD: round title and the count of elements still in the game
+const hud = el("div", "abs", boardLayer);
+const LEFT = lab(hud, "118 LEFT", 54, 1040, 92, { color: G.au }); LEFT.style.transform = "translateX(-100%)";
+const ROUNDS = [["ROUND 1: GASES", OUT.gas, GA], ["ROUND 2: LIQUIDS", OUT.liquid, LQ], ["ROUND 3: HOTHEADS", OUT.hot, HO], ["ROUND 4: RADIOACTIVE", OUT.glow, GL], ["ROUND 5: RUST", OUT.rust, RU], ["ROUND 6: TOO RARE", OUT.rare, RA], ["THE FINAL", 0, FI[0]]]
+  .map(([text, , line]) => ({ e: lab(hud, text, 54, 40, 92), line }));
+const COUNTS = [[OUT.gas, 107], [OUT.liquid, 105], [OUT.hot, 93], [OUT.glow, 59], [OUT.rust, 8], [OUT.rare, 3]];
+const B0 = { all: .05, one: cue(W(HK[0], "this one", 0), "magic", .7), go: cue(W(HK[1], "tournament", -.1), "whistle"), roundsEnd: L(FI[0]) - .5,
+  endIn: L(EN) - .5, tried: W(EN, "tried out", 0), only: cue(W(EN, "Only one", 0), "magic"), loop: E(EN) + 1.2 };
+const ptOut = cue(W(FI[1], "came close", 0), "wrong"), agOut = cue(W(FI[2], "tarnishes", .3), "wrong");
+
+function renderBoard(t) {
+  // where the board sits: centred in the hook and the ending, up top as a scoreboard during the rounds
+  const up = clamp(prog(t, B0.go - .2, .8)) * (1 - clamp(prog(t, B0.endIn, .8)));
+  const vis = 1 - prog(t, B0.roundsEnd, .4) + prog(t, B0.endIn, .4);
+  const y = lerp(560, 200, eio(up)), s = lerp(1, .92, eio(up));
+  board.style.left = "20px"; board.style.top = y + "px";
+  tf(board, clamp(vis), `scale(${s})`);
+  const restore = prog(t, B0.loop, .6);
+  const spotlight = (t > B0.one - .1 && t < B0.go - .2) || t > B0.only - .1;
+  TILES.forEach((T) => {
+    const { d, z, c, r, round, seed } = T;
+    let o = 1, tr = "", tint = 0;
+    const p0 = pop(t, B0.all + (c + r) * .025, .4);
+    tr = `scale(${Math.max(p0, 0)})`; o = clamp(p0 * 2);
+    if (spotlight && z !== 79) o *= t > B0.only ? .6 : .45;
+    const te = OUT[round] !== undefined ? OUT[round] + seed * .6 : round === "final" ? (z === 78 ? ptOut : agOut) : null;
+    if (te !== null && t >= te && restore < 1) {
+      const k = prog(t, te, .8);
+      if (k < 1) {
+        if (round === "gas") { tr = `translate(${Math.sin(t * 5 + z) * 10 * k}px, ${-160 * eo(k)}px)`; o = 1 - k; }
+        else if (round === "liquid") { tr = `scale(${1 + .3 * k}, ${1 - .85 * k})`; o = 1 - k * k; }
+        else if (round === "hot") { tint = Math.min(k * 3, .85); tr = `translate(${Math.sin(t * 60 + z) * 4 * (1 - k)}px, 0)`; o = 1 - clamp((k - .5) * 2); }
+        else if (round === "glow") { tint = .6 + .3 * Math.sin(t * 20); tr = `scale(${1 + .15 * Math.sin(k * Math.PI)})`; o = 1 - clamp((k - .4) / .6); }
+        else if (round === "rust") { tint = Math.min(k * 2, .75); const f = clamp((k - .45) / .55); tr = `translate(${f * 10}px, ${70 * f * f}px) rotate(${f * 40 * (seed - .5)}deg)`; o = 1 - f; }
+        else { tr = `scale(${1 - k})`; o = 1 - k * .5; }
+      } else { o = .13; tr = ""; tint = 0; }
+      if (t > B0.tried && t < B0.only + .2 && k >= 1) { o = .3; tr = `translateY(${Math.sin(t * 4 + z) * 3}px)`; }
+    }
+    if (restore > 0 && te !== null && t >= te) { o = lerp(o, 1, restore); tint = lerp(tint, 0, restore); }
+    if (z === 79) {
+      const big = (t > B0.one && t < B0.go) ? eio(prog(t, B0.one, .4)) * (1 - eio(prog(t, B0.go - .6, .4))) : t > B0.only ? eio(prog(t, B0.only, .4)) : 0;
+      tr += ` scale(${1 + .9 * big})`;
+      d.style.zIndex = 5;
+    }
+    d.style.opacity = o; d.style.transform = tr;
+    if (round === "hot" || round === "glow" || round === "rust") tints(d).forEach((q) => q.setAttribute("opacity", tint));
+    blink(d, t, z);
+  });
+  auHalo.style.opacity = spotlight ? (.7 + .2 * Math.sin(t * 4)) : 0;
+  // HUD
+  const hudOn = prog(t, B0.go, .4) * (1 - prog(t, L(ST) - .4, .3)) + prog(t, B0.endIn, .4);
+  hud.style.opacity = clamp(hudOn);
+  let left = 118;
+  COUNTS.forEach(([te, n]) => { if (t >= te + .5) left = n; });
+  if (t >= ptOut + .3) left = 2;
+  if (t >= agOut + .3) left = 1;
+  if (t >= B0.loop) left = 118;
+  LEFT.textContent = `${left} LEFT`;
+  ROUNDS.forEach(({ e, line }, i) => {
+    const next = ROUNDS[i + 1] ? L(ROUNDS[i + 1].line) - .5 : L(ST) - .4;
+    const a = i === 0 ? B0.go : L(line) - .5;
+    e.style.opacity = t >= a && t < next ? 1 : 0;
+  });
+}
+
+/* ================= HOOK ================= */
+const s0 = LAYER.hook;
+const s0Title = lab(s0, "118 ELEMENTS", 92, 540, 300, { align: "c", color: "#fff" });
+const s0Pick = lab(s0, "WHY THIS ONE?", 92, 540, 1260, { align: "c", color: G.au });
+function rHook(t) {
+  fadeE(s0Title, t, .2, B0.go - .2, "translateX(-50%)");
+  fadeE(s0Pick, t, B0.one, B0.go - .2, "translateX(-50%)");
+}
+
+/* ================= ROUND 1: gases float off ================= */
+const B1 = { open: cue(W(GA, "Open your wallet", 0), "pop") };
+const s1 = LAYER.gas;
+const s1Wallet = art(s1, 300, 200, walletArt, 390, 1250, [300, 200]);
+const s1Flap = art(s1, 300, 90, flapArt, 390, 1290, [300, 90], "3% 4%");
+const s1Balloons = [["H", 290, 930], ["He", 465, 860], ["Ne", 640, 940]].map(([sym, x, y], i) => {
+  const g = el("div", "abs", s1); place(g, x, y); g.style.transformOrigin = "75px 300px";
+  art(g, 20, 220, stringArt, 65, 140, [20, 200]);
+  art(g, 100, 100, tileArt(sym, G.gas, i === 1 ? "shock" : "happy", { num: [1, 2, 10][i] }), 0, 0, [150, 150]);
+  return g;
+});
+function rGas(t) {
+  tf(s1Wallet, prog(t, L(GA) - .4, .3), `translateY(${shake(t, B1.open, .4, 6)}px)`);
+  const open = eio(prog(t, B1.open, .4));
+  tf(s1Flap, prog(t, L(GA) - .4, .3), `rotate(${-115 * open}deg)`);
+  s1Balloons.forEach((b, i) => {
+    const k = eo(prog(t, B1.open + .15 + i * .1, .6)), fly = prog(t, OUT.gas + i * .15, 2.2);
+    tf(b, k > 0 ? 1 - prog(t, OUT.gas + 1.6, .6) : 0, `translate(${Math.sin(t * 2 + i * 2) * 14}px, ${(1 - k) * 280 - fly * fly * 1000}px) scale(${lerp(.3, 1, k)}) rotate(${Math.sin(t * 2.4 + i) * 6}deg)`);
+    blink(b, t, 20 + i);
+  });
+}
+
+/* ================= ROUND 2: liquids melt away ================= */
+const B2 = { mercury: W(LQ, "Mercury", 0), toxic: cue(W(LQ, "toxic", -.1), "wrong", .6) };
+const s2 = LAYER.liquid;
+const s2Hand = art(s2, 360, 300, palmArt(), 360, 1270, [360, 300]);
+const s2Hg = tileBig(s2, "Hg", G.liquid, 450, 870, 180, ["happy", "shock"], 80);
+const s2Blob = art(s2, 300, 120, blobArt("#c8d2e0"), 390, 1250, [300, 120], "50% 100%");
+const s2Drips = Array.from({ length: 7 }, (_, i) => art(s2, 40, 70, dripArt("#c8d2e0"), 430 + (i % 4) * 46, 1330, [40, 70]));
+const s2Skull = art(s2, 140, 140, skullArt, 760, 880, [160, 160]);
+function rLiquid(t) {
+  fadeE(s2Hand, t, L(LQ) - .4, 1e9, `translateY(${Math.sin(t * 2) * 4}px)`);
+  const melt = eio(prog(t, OUT.liquid, .7));
+  setMood(s2Hg, t > B2.mercury ? "shock" : "happy");
+  tf(s2Hg, prog(t, L(LQ) - .3, .3) * (1 - melt), `translateY(${lerp(0, 220, melt) + Math.sin(t * 6) * 4}px) scale(${1 + .3 * melt}, ${1 - .7 * melt})`);
+  blink(s2Hg, t, 30);
+  const bl = melt * (1 - prog(t, OUT.liquid + 1.6, .6));
+  tf(s2Blob, bl, `scale(${1 - .5 * prog(t, OUT.liquid + .8, 1.2)}, 1)`);
+  s2Drips.forEach((d, i) => { const per = .7, ph = ((t - OUT.liquid - .5 - i * .1) % per + per) % per / per; tf(d, t > OUT.liquid + .5 ? 1 - ph : 0, `translateY(${ph * 300}px)`); });
+  popE(s2Skull, t, B2.toxic, 1e9, { rot: Math.sin(t * 3) * 6 });
+}
+
+/* ================= ROUND 3: hotheads burst into flames ================= */
+const B3 = { pay: cue(W(HO, "Good luck", 0), "whoosh", .6), payBurn: cue(W(HO, "payday", 0), "boom", .8) };
+const s3 = LAYER.hot;
+const s3Cloud = art(s3, 420, 200, cloudArt, 330, 760, [420, 200]);
+const s3Drops = Array.from({ length: 12 }, (_, i) => art(s3, 24, 40, dropArt, 360 + (i % 6) * 64, 930, [24, 40]));
+const s3Fire = [art(s3, 260, 260, fireArt, 200, 900, [300, 300]), art(s3, 260, 260, fireArt, 560, 900, [300, 300])];
+const s3Tiles = [tileBig(s3, "Na", G.hot, 270, 1010, 170, ["happy", "dead"], 11), tileBig(s3, "K", G.hot, 630, 1010, 170, ["happy", "woozy"], 19)];
+const s3Env = el("div", "abs", s3); place(s3Env, 380, 1250);
+art(s3Env, 320, 200, envelopeArt, 0, 0, [320, 200]);
+lab(s3Env, "PAYDAY", 56, 160, 120, { align: "c", color: "#fff" });
+const s3EnvFire = art(s3, 260, 260, fireArt, 410, 1150, [260, 260]);
+function rHot(t) {
+  fadeE(s3Cloud, t, L(HO) - .4, 1e9, `translateX(${Math.sin(t * .8) * 30}px)`);
+  s3Drops.forEach((d, i) => { const per = .55, ph = ((t - i * .05) % per + per) % per / per; tf(d, t > L(HO) ? .9 : 0, `translate(${Math.sin(t + i) * 6}px, ${ph * 120}px)`); });
+  s3Tiles.forEach((c, i) => {
+    const burn = t > OUT.hot + i * .2;
+    setMood(c, burn ? (i ? "woozy" : "dead") : "happy");
+    setTint(c, "#2a2222", burn ? .55 : 0);
+    tf(c, prog(t, L(HO) - .3, .3), `translate(${shake(t, OUT.hot + i * .2, .8, 12)}px, 0)`);
+    blink(c, t, 40 + i);
+  });
+  s3Fire.forEach((f, i) => { const k = prog(t, OUT.hot + i * .2, 1.1); tf(f, k > 0 && k < 1 ? 1 - k * k : 0, `scale(${.4 + k})`); });
+  const ev = eo(prog(t, B3.pay, .5));
+  tf(s3Env, ev * (1 - prog(t, B3.payBurn + .3, .4)), `translateX(${(1 - ev) * 600}px) rotate(${-4 + shake(t, B3.payBurn, .5, 3)}deg)`);
+  const eb = prog(t, B3.payBurn, 1.2);
+  tf(s3EnvFire, eb > 0 && eb < 1 ? 1 - eb * eb : 0, `scale(${.4 + eb})`);
+}
+
+/* ================= ROUND 4: radioactive — your wallet glows, and so do you ================= */
+const B4 = { you: cue(W(GL, "So would you", 0), "boing") };
+const s4 = LAYER.glow;
+const s4U = tileBig(s4, "U", G.glow, 160, 830, 180, ["happy"], 92);
+const s4Tre = art(s4, 140, 140, trefoilArt, 820, 830, [140, 140]);
+const s4WalletGlow = halo(s4, 640, 1230, 260, "125,255,106");
+const s4Wallet = art(s4, 300, 200, walletArt, 490, 1130, [300, 200]);
+const s4HandGlow = halo(s4, 230, 1380, 230, "125,255,106");
+const s4Hand = art(s4, 360, 300, palmArt(), 60, 1240, [330, 275]);
+const s4HandG = art(s4, 360, 300, palmArt("#a8f08f"), 60, 1240, [330, 275]);
+function rGlow(t) {
+  const on = prog(t, L(GL) - .4, .3);
+  tf(s4U, on, `scale(${1 + .04 * Math.sin(t * 8)})`); blink(s4U, t, 50);
+  tf(s4Tre, on, `rotate(${t * 40}deg)`);
+  const wg = prog(t, OUT.glow, .4);
+  s4WalletGlow.style.opacity = wg * (.7 + .3 * Math.sin(t * 9));
+  fadeE(s4Wallet, t, L(GL) - .2);
+  const hk = eo(prog(t, OUT.glow + .2, .5)), yg = prog(t, B4.you, .3);
+  tf(s4Hand, hk * (1 - yg), `translateY(${(1 - hk) * 300}px)`);
+  tf(s4HandG, hk * yg, `translateY(${(1 - hk) * 300}px)`);
+  s4HandGlow.style.opacity = yg * (.7 + .3 * Math.sin(t * 9 + 1));
+}
+
+/* ================= ROUND 5: rust — money that rots in your pocket ================= */
+const B5 = { iron: W(RU, "Iron", 0), rots: W(RU, "rots", 0), out: cue(W(RU, "Out", 0), "stamp") };
+const s5 = LAYER.rust;
+const s5Fe = tileBig(s5, "Fe", G.rust, 450, 860, 180, ["happy", "sad", "dead"], 26);
+const s5Pocket = art(s5, 420, 320, pocketArt, 330, 980, [420, 320]);
+const s5Flakes = Array.from({ length: 10 }, (_, i) => art(s5, 40, 30, flakeArt, 470 + (i % 5) * 30, 930, [40, 30]));
+const s5Out = lab(s5, "OUT!", 150, 540, 1340, { align: "c", color: G.red });
+function rRust(t) {
+  const rust = prog(t, B5.iron + .2, 1.2), rot = prog(t, B5.rots, 1.0);
+  setMood(s5Fe, t > B5.out ? "dead" : t > B5.iron + .3 ? "sad" : "happy");
+  setTint(s5Fe, G.rustBrown, .7 * rust);
+  tf(s5Fe, prog(t, L(RU) - .3, .3) * (1 - rot * .8), `translateY(${rot * 80}px) rotate(${rot * 12}deg)`);
+  blink(s5Fe, t, 60);
+  fadeE(s5Pocket, t, L(RU) - .4);
+  s5Flakes.forEach((f, i) => { const k = prog(t, B5.rots + i * .08, .9); tf(f, k > 0 && k < 1 ? 1 - k : 0, `translate(${(i - 5) * 14 * k}px, ${k * 380}px) rotate(${k * 300}deg)`); });
+  const o = pop(t, B5.out, .35);
+  tf(s5Out, clamp(o), `translateX(-50%) scale(${Math.max(1.6 - .6 * clamp(o), 0) * Math.max(o, 0)}) rotate(-10deg)`);
+}
+
+/* ================= ROUND 6: too rare to go around ================= */
+const B6 = { rh: cue(W(RA, "Rhodium", 0), "pop"), found: W(RA, "Rhodium", .4) };
+const s6 = LAYER.rare;
+const s6Hands = Array.from({ length: 8 }, (_, i) => { const a = i / 8 * Math.PI * 2; const x = 540 + Math.cos(a) * 300, y = 1130 + Math.sin(a) * 230; const h = art(s6, 120, 160, reachArt(["#f2c9a0", "#d9a07a", "#c98e6a", "#f0c49c"][i % 4]), x - 60, y - 80, [120, 160]); h._a = a; return h; });
+const s6Rh = tileBig(s6, "Rh", G.rare, 512, 1100, 56, ["happy", "shock"], 45);
+const s6Mag = art(s6, 260, 260, magArt, 420, 990, [260, 260]);
+const s6Found = pill(s6, "FOUND IN 1804", 300, 830, { size: 60 });
+function rRare(t) {
+  s6Hands.forEach((h, i) => { const k = eo(prog(t, L(RA) - .3 + i * .05, .5)), jig = Math.sin(t * 9 + i) * 14; tf(h, k, `translate(${-Math.cos(h._a) * (40 * k + jig)}px, ${-Math.sin(h._a) * (40 * k + jig)}px) rotate(${(h._a * 180 / Math.PI) - 90}deg)`); });
+  const zoom = eio(prog(t, B6.rh, .5));
+  setMood(s6Rh, t > B6.rh ? "shock" : "happy");
+  tf(s6Rh, prog(t, L(RA) - .3, .3), `scale(${1 + 1.4 * zoom})`); blink(s6Rh, t, 70);
+  tf(s6Mag, zoom, `rotate(${-10 + Math.sin(t * 2) * 4}deg)`);
+  popE(s6Found, t, B6.found);
+}
+
+/* ================= THE FINAL: platinum won't melt, silver turns black ================= */
+const B7 = { three: cue(W(FI[0], "final three", 0), "ding"), pt: W(FI[1], "Platinum", 0), ancient: W(FI[1], "No ancient", 0), ag: W(FI[2], "Silver", 0) };
+const s7 = LAYER.final;
+const s7A = el("div", "cam", s7), s7B = el("div", "cam", s7), s7C = el("div", "cam", s7);
+const s7Beams = [[150, 300], [430, 360], [700, 300]].map(([x, w]) => { const b = el("div", "beam", s7A); Object.assign(b.style, { width: w + "px", height: "1100px" }); return place(b, x, 120); });
+const s7Podium = art(s7A, 900, 300, podiumArt, 90, 1150, [900, 300]);
+const s7Fin = [tileBig(s7A, "Pt", G.pt, 150, 1070, 190, ["smug"], 78), tileBig(s7A, "Au", G.au, 440, 990, 200, ["smug"], 79), tileBig(s7A, "Ag", G.ag, 705, 1110, 180, ["happy"], 47)];
+// B: the furnace that can't melt platinum
+const TMIN = 1100, TMAX = 560; // thermometer column: 0 °C at y TMIN, 2000 °C at y TMAX
+const tY = (c) => lerp(TMIN, TMAX, c / 2000);
+const s7Furnace = art(s7B, 420, 420, furnaceArt, 120, 700, [420, 420]);
+const s7Flames = art(s7B, 160, 140, flamesArt, 250, 980, [160, 140], "50% 100%");
+const s7Cru = art(s7B, 200, 150, crucibleArt, 230, 590, [200, 150]);
+const s7Pt = tileBig(s7B, "Pt", G.pt, 270, 470, 120, ["smug"], 78);
+const s7Thermo = art(s7B, 120, 620, thermoArt, 780, TMAX - 40, [120, 620]);
+const s7Col = el("div", "abs", s7B); Object.assign(s7Col.style, { left: "826px", width: "28px", background: G.red, borderRadius: "14px" });
+const s7Mark = el("div", "abs", s7B); Object.assign(s7Mark.style, { left: "760px", width: "160px", height: "8px", background: "#fff", top: tY(1768) + "px" });
+const s7MarkLab = lab(s7B, "1,768°C", 52, 740, tY(1768) - 26, { color: "#fff" }); s7MarkLab.style.transform = "translateX(-100%)";
+const s7MaxLab = lab(s7B, "ANCIENT MAX", 40, 740, tY(1200) - 20, { color: G.fire }); s7MaxLab.style.transform = "translateX(-100%)";
+const s7PtNo = art(s7B, 120, 120, noArt, 380, 430, [110, 110]);
+// C: silver tarnishes
+const s7Ag = tileBig(s7C, "Ag", G.ag, 340, 700, 400, ["happy", "sad"], 47);
+const s7AgNo = art(s7C, 120, 120, noArt, 700, 680, [140, 140]);
+function rFinal(t) {
+  shots(t, [[s7A, 0], [s7B, L(FI[1]) - .25], [s7C, L(FI[2]) - .25]], .35);
+  s7Beams.forEach((b, i) => { b.style.opacity = prog(t, B7.three + i * .15, .3) * (.8 + .2 * Math.sin(t * 3 + i)); });
+  fadeE(s7Podium, t, L(FI[0]) - .4);
+  s7Fin.forEach((c, i) => { popE(c, t, B7.three + [0, .3, .15][i] - .3, 1e9, { y: bob(t, 80 + i, 4) }); blink(c, t, 80 + i); });
+  // B
+  fadeE(s7Furnace, t, L(FI[1]) - .3);
+  tf(s7Flames, prog(t, L(FI[1]) - .2, .3), `scale(${1 + .12 * Math.sin(t * 14)}, ${1 + .2 * Math.sin(t * 11)})`);
+  fadeE(s7Cru, t, L(FI[1]) - .3);
+  tf(s7Pt, prog(t, L(FI[1]) - .2, .3), `translateY(${Math.sin(t * 3) * 3}px)`); blink(s7Pt, t, 90);
+  fadeE(s7Thermo, t, L(FI[1]) - .3);
+  const temp = Math.min(lerp(20, 1200, eio(prog(t, B7.pt + .2, 2.2))), 1200) + (t > B7.ancient ? Math.sin(t * 20) * 25 : 0);
+  Object.assign(s7Col.style, { top: tY(temp) + "px", height: TMIN + 40 - tY(temp) + "px", opacity: prog(t, L(FI[1]) - .2, .3) });
+  s7Mark.style.opacity = prog(t, B7.pt, .3);
+  fadeE(s7MarkLab, t, B7.pt, 1e9, "translateX(-100%)");
+  fadeE(s7MaxLab, t, B7.ancient - .3, 1e9, "translateX(-100%)");
+  popE(s7PtNo, t, ptOut, 1e9, { rot: -8 });
+  // C
+  setMood(s7Ag, t > agOut - .3 ? "sad" : "happy");
+  setTint(s7Ag, "#262626", .78 * eio(prog(t, B7.ag + .6, 2.0)));
+  fadeE(s7Ag, t, L(FI[2]) - .25); blink(s7Ag, t, 91);
+  popE(s7AgNo, t, agOut + .3, 1e9, { rot: -8 });
+}
+
+/* ================= GOLD WINS; a mask that still shines ================= */
+const B8 = { melt: cue(W(WI[0], "melts", 0), "pour"), rust: cue(W(WI[0], "never rusts", 0), "ding", .7), rare: cue(W(WI[0], "is rare", 0), "ding", .8),
+  mask: cue(L(WI[1]) - .1, "magic", .7), years: W(WI[1], "still shines", 0) };
+const s8 = LAYER.win;
+const s8A = el("div", "cam", s8), s8B = el("div", "cam", s8);
+const s8Furnace = art(s8A, 420, 420, furnaceArt, 60, 560, [380, 380]);
+const s8Flames = art(s8A, 160, 140, flamesArt, 170, 810, [150, 130], "50% 100%");
+const s8Cru = art(s8A, 200, 150, crucibleArt, 160, 470, [180, 135]);
+const s8Au = tileBig(s8A, "Au", G.au, 180, 220, 140, ["smug", "happy"], 79);
+const s8Coin = art(s8A, 200, 200, goldCoinArt, 600, 520, [260, 260]);
+const s8Halo = halo(s8A, 730, 650, 230);
+const CHECKS = [["EASY TO MELT", "melts"], ["NEVER RUSTS", "never rusts"], ["JUST RARE ENOUGH", "not too rare"]].map(([text], i) => {
+  const g = el("div", "abs", s8A); place(g, 110, 1060 + i * 150);
+  art(g, 120, 120, okArt, 0, 0, [100, 100]); lab(g, text, 64, 130, 18, { color: "#fff" });
+  return g;
+});
+const s8Mask = art(s8B, 360, 460, maskArt(), 360, 420, [360, 460]);
+const s8MaskHalo = halo(s8B, 540, 650, 360);
+const s8Spark = Array.from({ length: 6 }, (_, i) => art(s8B, 40, 40, sparkArt(), [380, 700, 420, 690, 540, 330][i], [470, 520, 760, 800, 400, 640][i], [44, 44]));
+const s8Line = el("div", "abs", s8B); Object.assign(s8Line.style, { left: "120px", top: "1130px", width: "840px", height: "10px", background: "#fff", borderRadius: "5px", transformOrigin: "0 50%" });
+const s8From = lab(s8B, "1323 BC", 52, 120, 1170, { color: "#fff" });
+const s8To = lab(s8B, "TODAY", 52, 960, 1170, { color: "#fff" }); s8To.style.transform = "translateX(-100%)";
+const s8Years = pill(s8B, "3,300 YEARS", 330, 1250, { size: 64, bg: G.au });
+function rWin(t) {
+  shots(t, [[s8A, 0], [s8B, L(WI[1]) - .3]], .35);
+  fadeE(s8Furnace, t, L(WI[0]) - .4);
+  tf(s8Flames, prog(t, L(WI[0]) - .3, .3), `scale(${1 + .12 * Math.sin(t * 14)}, ${1 + .2 * Math.sin(t * 11)})`);
+  fadeE(s8Cru, t, L(WI[0]) - .4);
+  const jump = eio(prog(t, L(WI[0]) - .1, .6)), melt = prog(t, B8.melt, .5);
+  setMood(s8Au, t > B8.melt ? "happy" : "smug");
+  tf(s8Au, prog(t, L(WI[0]) - .4, .3) * (1 - melt), `translate(0, ${jump * 250 - Math.sin(jump * Math.PI) * 120}px) scale(${1 - .3 * melt})`); blink(s8Au, t, 95);
+  popE(s8Coin, t, B8.melt + .3, 1e9, { rot: Math.sin(t * 2) * 8 });
+  s8Halo.style.opacity = prog(t, B8.melt + .3, .4) * (.6 + .2 * Math.sin(t * 4));
+  [B8.melt, B8.rust, B8.rare].forEach((a, i) => popE(CHECKS[i], t, a, 1e9, { dur: .35 }));
+  // B
+  popE(s8Mask, t, L(WI[1]) - .3, 1e9, { y: bob(t, 96, 4) });
+  s8MaskHalo.style.opacity = prog(t, B8.mask, .5) * (.4 + .2 * Math.sin(t * 3));
+  s8Spark.forEach((s, i) => { const ph = ((t * .9 + i * .37) % 1 + 1) % 1; tf(s, prog(t, B8.mask, .3) * Math.sin(ph * Math.PI), `scale(${.4 + ph}) rotate(${ph * 90}deg)`); });
+  const ln = eio(prog(t, B8.years - .4, .8));
+  tf(s8Line, prog(t, B8.years - .5, .2), `scaleX(${ln})`);
+  fadeE(s8From, t, B8.years - .5);
+  fadeE(s8To, t, B8.years + .2, 1e9, "translateX(-100%)");
+  popE(s8Years, t, B8.years);
+}
+
+/* ================= STARS: much of it was forged when dead stars collided ================= */
+const B9 = { hit: cue(W(ST, "collided", 0), "boom"), q: W(ST, "Why so rare", 0) };
+const s9 = LAYER.star;
+const s9Dots = Array.from({ length: 40 }, (_, i) => { const d = el("div", "abs", s9); const r = 2 + hash(i * 3.1) * 4; Object.assign(d.style, { width: 2 * r + "px", height: 2 * r + "px", borderRadius: "50%", background: "#fff" }); return place(d, hash(i * 1.7) * 1080, hash(i * 2.9) * 1500); });
+const s9Q = lab(s9, "WHY SO RARE?", 96, 540, 240, { align: "c", color: G.au });
+const s9Stars = [art(s9, 160, 160, nstarArt, 460, 740, [160, 160]), art(s9, 160, 160, nstarArt, 460, 740, [160, 160])];
+const s9Flash = halo(s9, 540, 820, 520, "255,255,240");
+const s9Gold = Array.from({ length: 26 }, (_, i) => art(s9, 40, 40, sparkArt(G.au), 520, 800, [30 + (i % 3) * 12, 30 + (i % 3) * 12]));
+const s9Earth = art(s9, 200, 200, earthArt, 800, 1300, [180, 180]);
+function rStar(t) {
+  s9Dots.forEach((d, i) => { d.style.opacity = .3 + .5 * Math.abs(Math.sin(t * 1.3 + i)); });
+  fadeE(s9Q, t, B9.q, 1e9, "translateX(-50%)");
+  const spiral = clamp(prog(t, L(ST) - .4, B9.hit - L(ST) + .4)), r = lerp(300, 0, eio(spiral)), ang = t * lerp(2, 14, spiral * spiral);
+  s9Stars.forEach((s, i) => { const a = ang + i * Math.PI; tf(s, t < B9.hit ? prog(t, L(ST) - .4, .3) : 0, `translate(${Math.cos(a) * r}px, ${Math.sin(a) * r * .6}px)`); });
+  const f = prog(t, B9.hit, .9);
+  s9Flash.style.opacity = f > 0 ? Math.sin(Math.min(f * 2, 1) * Math.PI / 2) * (1 - f * .6) : 0;
+  s9Gold.forEach((g, i) => { const a = i / 26 * Math.PI * 2, k = eo(prog(t, B9.hit + .05, 1.4)); tf(g, k > 0 ? 1 - prog(t, B9.hit + 1.2, .6) : 0, `translate(${Math.cos(a) * 520 * k}px, ${Math.sin(a) * 520 * k}px) rotate(${k * 200}deg)`); });
+  fadeE(s9Earth, t, L(ST), 1e9, `rotate(${t * 6}deg)`);
+}
+
+/* ================= CUBE: all the gold ever mined ================= */
+const B10 = { cube: cue(W(CU, "one cube", -.3), "thud"), size: cue(W(CU, "22 meters", 0), "pop") };
+const s10 = LAYER.cube;
+const CUBE_EDGE = 364;
+const s10Cube = art(s10, 480, 520, cubeArt, 40, 560, [672, 728], "50% 100%");
+const s10Bld = art(s10, 220, 500, buildingArt(), 800, 1288 - CUBE_EDGE, [160, CUBE_EDGE], "50% 100%");
+const s10Person = art(s10, 40, 110, personArt, 980, 1288 - 30, [12, 30], "50% 100%");
+const s10Ground = el("div", "abs", s10); Object.assign(s10Ground.style, { left: "0", top: "1288px", width: "1080px", height: "10px", background: "#e9ecf5", opacity: ".6" });
+const s10Dim = el("div", "abs", s10); Object.assign(s10Dim.style, { left: "392px", width: "8px", background: "#fff", top: 1288 - CUBE_EDGE + "px", height: CUBE_EDGE + "px" });
+const s10Size = pill(s10, "≈ 22 m", 420, 1050, { size: 72, bg: "#fff" });
+const s10BldLab = lab(s10, "7 FLOORS", 44, 880, 1320, { align: "c", color: "#fff" });
+const s10Gold = lab(s10, "ALL GOLD EVER MINED", 56, 540, 200, { align: "c", color: G.au });
+function rCube(t) {
+  const c = eo(prog(t, B10.cube, .6));
+  tf(s10Cube, clamp(c * 2), `translateY(${(1 - c) * -500}px)`);
+  fadeE(s10Gold, t, L(CU) - .2, 1e9, "translateX(-50%)");
+  fadeE(s10Ground, t, L(CU) - .4);
+  fadeE(s10Bld, t, L(CU) - .2);
+  fadeE(s10Person, t, L(CU));
+  s10Dim.style.opacity = prog(t, B10.size, .3);
+  popE(s10Size, t, B10.size);
+  fadeE(s10BldLab, t, B10.size + .3, 1e9, "translateX(-50%)");
+}
+
+/* ================= END: back to the board; only one became money ================= */
+const s11 = LAYER.end;
+const s11Win = lab(s11, "WINNER", 96, 540, 330, { align: "c", color: G.au });
+function rEnd(t) { fadeE(s11Win, t, B0.only, B0.loop, "translateX(-50%)"); }
+
+/* ---------------- render ---------------- */
+const RENDER = { hook: rHook, gas: rGas, liquid: rLiquid, hot: rHot, glow: rGlow, rust: rRust, rare: rRare, final: rFinal, win: rWin, star: rStar, cube: rCube, end: rEnd };
+const FADES = {};
+function render(t) {
+  const key = renderShell(t, { bgMap: BG, chunks, fade: FADES });
+  const sc = sceneAt(t, { fade: FADES[key] ?? SCENE_FADE });
+  RENDER[key](t);
+  if (sc.prev && sc.alpha < 1) RENDER[sc.prev.key](t);
+  renderBoard(t);
+}
+definePage({ render, meta: SHELL.meta });
+</script>
+</body>
+</html>

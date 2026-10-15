@@ -1,0 +1,8 @@
+{
+  "page": "broker.html",
+  "lines": "lines-broker.json",
+  "voice": { "provider": "minimax" },
+  "poster": 3,
+  "maxSeconds": 0,
+  "workers": 4
+}

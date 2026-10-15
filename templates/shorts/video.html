@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>New video</title>
+<link rel="stylesheet" href="../../kit/styles/handdrawn/shell.css">
+<style>
+  #frame { --grain: .12; --vignette: rgba(0, 0, 0, .35); }
+  .lab { position: absolute; font-family: "NotoSC", sans-serif; font-weight: 900; white-space: nowrap; line-height: 1; color: #fff;
+         -webkit-text-stroke: 8px #11142a; paint-order: stroke fill; }
+  .lab.c { transform: translateX(-50%); }
+</style>
+</head>
+<body>
+<script src="../../kit/core/anim.js"></script>
+<script src="../../kit/core/timeline.js"></script>
+<script src="../../kit/core/captions.js"></script>
+<script src="../../kit/core/page.js"></script>
+<script src="../../kit/styles/handdrawn/shell.js"></script>
+<script src="../../kit/styles/handdrawn/art.js"></script>
+<script src="../../kit/styles/handdrawn/motion.js"></script>
+<script>
+/* Template: one scene per `s` key in lines-video.json; every beat is anchored on a word of the narration. */
+const STAGE = "radial-gradient(900px 900px at 50% 40%, #272f55, #1d2340)";
+buildShell({ bg: STAGE, caption: { style: "film", maxLines: 1 } });   // English: film captions, one line
+defineScenes();
+const LAYER = makeSceneLayers();
+const chunks = makeChunks({ maxChars: 14, plain: true, hardBreaks: true });   // Chinese: makeChunks({ maxChars: 14, plain: true, hardBreaks: true }) and the pill caption
+
+/* When the narration reaches `word` in line i (share of letters/characters before it), plus a small lag. */
+const CC = (s) => s.replace(/[^A-Za-z0-9㐀-鿿]/g, "").length;
+const W = (i, word, lag = .2) => {
+  const t = TL.lines[i].t, k = t.toLowerCase().indexOf(word.toLowerCase());
+  if (k < 0) throw new Error(`line ${i} has no "${word}"`);
+  return at(i, Math.min(D(i) - .05, D(i) * CC(t.slice(0, k)) / CC(t) + lag));
+};
+const LS = (s, n = 0) => { let c = 0; for (let i = 0; i < N; i++) if (TL.lines[i].s === s && c++ === n) return i; throw new Error(`no line ${s}#${n}`); };
+
+/* Sound effects: cue(t, kind, gain) at build time (never inside render) — kinds are the keys of SFX in kit/tools/mix-audio.py. */
+const SFX = [];
+const cue = (t, kind, gain = 1) => { SFX.push([+t.toFixed(3), kind, gain]); return t; };
+window.SFX = SFX;
+
+const lab = (parent, text, size, x, y, color = "#fff") => { const d = el("div", "lab c", parent, text); d.style.fontSize = size + "px"; d.style.color = color; return place(d, x, y); };
+function popE(e, t, a0, a1 = 1e9, { s = 1, x = 0, y = 0, rot = 0 } = {}) {
+  const p = Math.max(pop(t, a0, .4), 0), o = clamp(p) * (1 - prog(t, a1, .3));
+  tf(e, o, `translate(${x}px, ${y}px) scale(${p * s}) rotate(${rot}deg)`);
+  return o;
+}
+
+/* ---- hook ---- */
+const H = [LS("hook"), LS("hook", 1)];
+const B1 = { in: .1, big: cue(W(H[0], "surprising", 0), "pop") };   // something on screen from the first frame
+const s1 = LAYER.hook;
+const s1Title = lab(s1, "HOOK", 140, 540, 700, "#f6c945");
+function rHook(t) { popE(s1Title, t, B1.in, 1e9, { s: t > B1.big ? 1.3 : 1 }); s1Title.style.transform = "translateX(-50%) " + s1Title.style.transform; }
+
+/* ---- point ---- */
+const P = LS("point");
+const B2 = { in: cue(L(P), "whoosh", .6) };
+const s2 = LAYER.point;
+const s2Coin = put(s2, 220, 220, clockArt(), 430, 700, { size: [220, 220] });
+function rPoint(t) { popE(s2Coin, t, B2.in); s2Coin.querySelector(".hand").style.transform = `rotate(${t * 90}deg)`; }
+
+/* ---- end ---- */
+const E0 = LS("end");
+const B3 = { in: L(E0) - .4, loop: cue(W(E0, "loop", 0), "ding") };
+const s3 = LAYER.end;
+const s3Lab = lab(s3, "LOOP", 140, 540, 700);
+function rEnd(t) { popE(s3Lab, t, B3.in, 1e9, { rot: t > B3.loop ? -6 : 0 }); s3Lab.style.transform = "translateX(-50%) " + s3Lab.style.transform; }
+
+const RENDER = { hook: rHook, point: rPoint, end: rEnd };
+function render(t) {
+  const key = renderShell(t, { chunks });
+  const sc = sceneAt(t);
+  RENDER[key](t);
+  if (sc.prev && sc.alpha < 1) RENDER[sc.prev.key](t);
+}
+definePage({ render, meta: SHELL.meta });
+</script>
+</body>
+</html>

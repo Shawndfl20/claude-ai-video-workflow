@@ -1,0 +1,15 @@
+node_modules/
+.venv/
+__pycache__/
+.DS_Store
+# fonts and voice cache are fetched / generated locally
+kit/.fonts/
+kit/build/
+# per-video build output and audio (finished videos are uploaded, not committed)
+videos/*/build/
+videos/*/*.wav
+templates/*/build/
+templates/*/*.wav
+# per-user channel settings (see AGENTS.md)
+channel.md
+CLAUDE.local.md

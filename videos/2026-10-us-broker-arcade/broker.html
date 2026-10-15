@@ -1,0 +1,329 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<title>買美股大作戰（街機）</title>
+<link rel="stylesheet" href="../../kit/styles/handdrawn/shell.css">
+<style>
+  #frame { --grain: 0; --vignette: rgba(0, 0, 0, .45); }
+  .ar { position: absolute; font-family: "NotoSC", sans-serif; font-weight: 900; white-space: nowrap; line-height: 1.1; color: #fff; }
+  .c { transform: translateX(-50%); }
+  .neon { -webkit-text-stroke: 6px #1a0f3a; paint-order: stroke fill; text-shadow: 0 0 18px rgba(255, 80, 200, .8), 0 8px 0 #1a0f3a; }
+  .box { position: absolute; border-radius: 22px; border: 6px solid #fff; background: #170e3c; box-sizing: border-box; }
+  .hudtxt { font-size: 40px; }
+  .pill { position: absolute; padding: 10px 26px; border-radius: 40px; font-family: "NotoSC", sans-serif; font-weight: 900; font-size: 40px; color: #fff; white-space: nowrap; }
+  .dmg { position: absolute; font-family: "NotoSC", sans-serif; font-weight: 900; font-size: 54px; color: #ff4d6d; white-space: nowrap; -webkit-text-stroke: 6px #1a0f3a; paint-order: stroke fill; transform: translateX(-50%); }
+</style>
+</head>
+<body>
+<script src="../../kit/core/anim.js"></script>
+<script src="../../kit/core/timeline.js"></script>
+<script src="../../kit/core/captions.js"></script>
+<script src="../../kit/core/page.js"></script>
+<script src="../../kit/styles/handdrawn/shell.js"></script>
+<script src="../../kit/styles/handdrawn/art.js"></script>
+<script src="../../kit/styles/handdrawn/motion.js"></script>
+<script>
+/* Arcade style: the two ways to buy US stocks are two players racing through five stages. Synthwave
+   grid, neon titles, damage numbers and HP-style cost bars. Hard-ish cuts between stages. */
+const NAVY = "#140c34", PINK = "#ff4fd8", CYAN = "#3ee8ff", P1C = "#ff5a4f", P2C = "#3f8cff", GOLD = "#ffd23f";
+buildShell({ format: "landscape", bg: `linear-gradient(180deg, #0d0826 0%, #2b1460 55%, #4a1a6b 100%)`, caption: { style: "film", maxLines: 1 }, glyphs: "TC" });
+const LAYER = makeSceneLayers();
+for (const l of Object.values(LAYER)) { l.style.transformOrigin = "960px 540px"; l.style.transform = "translateY(-46px) scale(.86)"; }
+const chunks = makeChunks({ maxChars: 16, plain: true, hardBreaks: true });
+
+const CC = (s) => s.replace(/[^A-Za-z0-9㐀-鿿]/g, "").length;
+const W = (i, word, lag = .15) => {
+  const t = TL.lines[i].t, k = t.indexOf(word);
+  if (k < 0) throw new Error(`line ${i} has no "${word}"`);
+  return at(i, Math.min(D(i) - .05, D(i) * CC(t.slice(0, k)) / CC(t) + lag));
+};
+const F = (i, f) => at(i, D(i) * f);
+const SFX = [];
+const cue = (t, kind, gain = 1) => { SFX.push([+t.toFixed(3), kind, gain]); return t; };
+window.SFX = SFX;
+
+const recede = (t, a, to = .3) => 1 - (1 - to) * prog(t, a, .4);
+
+/* ---------- backdrop: sun and moving grid (below the scene layers) ---------- */
+const backdrop = el("div", "abs", SHELL.frame);
+SHELL.frame.insertBefore(backdrop, SHELL.layers.hook);
+Object.assign(backdrop.style, { left: 0, top: 0, width: "1920px", height: "1080px" });
+const sun = put(backdrop, 520, 260, `<defs><linearGradient id="sun" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffe14f"/><stop offset="1" stop-color="#ff3fa4"/></linearGradient></defs>
+  <path d="M0 260 A260 260 0 0 1 520 260 Z" fill="url(#sun)"/>${[0, 1, 2, 3, 4].map((k) => `<rect x="0" y="${150 + k * 24}" width="520" height="${4 + k * 2}" fill="#2b1460"/>`).join("")}`, 700, 300);
+const grid = put(backdrop, 1920, 520, "", 0, 560);
+const gridSvg = grid.querySelector("svg");
+const gridLines = [...Array(10)].map(() => { const l = document.createElementNS("http://www.w3.org/2000/svg", "line"); l.setAttribute("stroke", PINK); l.setAttribute("stroke-width", "3"); l.setAttribute("opacity", ".55"); gridSvg.appendChild(l); return l; });
+gridSvg.insertAdjacentHTML("afterbegin", `<rect width="1920" height="520" fill="#1b0b3d"/>` + [...Array(21)].map((_, k) => `<line x1="${960 + (k - 10) * 40}" y1="0" x2="${960 + (k - 10) * 330}" y2="520" stroke="${PINK}" stroke-width="3" opacity=".55"/>`).join(""));
+
+/* ---------- sprites ---------- */
+const p1Art = () => `<ellipse cx="100" cy="194" rx="62" ry="8" fill="rgba(0,0,0,.35)"/><rect x="30" y="40" width="140" height="140" rx="34" fill="${P1C}"/><rect x="30" y="140" width="140" height="40" rx="18" fill="#d63f36"/>
+  <circle cx="78" cy="96" r="16" fill="#fff"/><circle cx="124" cy="96" r="16" fill="#fff"/><circle cx="82" cy="98" r="8" fill="${NAVY}"/><circle cx="128" cy="98" r="8" fill="${NAVY}"/>
+  <path d="M84 128 Q101 140 118 128" stroke="${NAVY}" stroke-width="6" fill="none" stroke-linecap="round"/>
+  <rect x="150" y="110" width="44" height="50" rx="6" fill="${GOLD}"/><path d="M158 112 Q172 88 186 112" stroke="${GOLD}" stroke-width="6" fill="none"/>`;
+const p2Art = () => `<ellipse cx="100" cy="194" rx="62" ry="8" fill="rgba(0,0,0,.35)"/><rect x="30" y="40" width="140" height="140" rx="34" fill="${P2C}"/><rect x="30" y="140" width="140" height="40" rx="18" fill="#2c66c9"/>
+  <rect x="44" y="72" width="112" height="46" rx="22" fill="${CYAN}" stroke="${NAVY}" stroke-width="6"/><circle cx="78" cy="95" r="9" fill="${NAVY}"/><circle cx="124" cy="95" r="9" fill="${NAVY}"/>
+  <path d="M84 138 Q101 150 118 138" stroke="${NAVY}" stroke-width="6" fill="none" stroke-linecap="round"/><path d="M160 150 L200 132 L196 160 Z" fill="#fff"/>`;
+const coinIco = (s = 60) => `<circle cx="${s / 2}" cy="${s / 2}" r="${s / 2 - 2}" fill="#c98a12"/><circle cx="${s / 2}" cy="${s / 2 - 2}" r="${s / 2 - 6}" fill="${GOLD}"/><text x="${s / 2}" y="${s / 2 + s * .14}" text-anchor="middle" font-family="NotoSC" font-weight="900" font-size="${s * .42}" fill="#c98a12">$</text>`;
+
+const T = (parent, text, size, x, y, { color = "#fff", cls = "ar neon c" } = {}) => { const d = el("div", cls, parent, text); d.style.fontSize = size + "px"; d.style.color = color; return place(d, x, y); };
+const Box = (parent, x, y, w, h, color = "#fff") => { const d = el("div", "box", parent); Object.assign(d.style, { left: x + "px", top: y + "px", width: w + "px", height: h + "px", borderColor: color }); return d; };
+const Pill = (parent, text, x, y, bg) => { const d = el("div", "pill", parent, text); d.style.background = bg; return place(d, x, y); };
+/** Pop in at a0 (overshoot), fade out at a1; keeps a centring translate when `c`. */
+function popE(e, t, a0, a1 = 1e9, { c = true, s = 1, y = 0 } = {}) {
+  const p = t < a0 ? 0 : popS(t, a0), o = popA(t, a0, a1, .2);
+  e.style.opacity = o;
+  e.style.transform = `${c ? "translateX(-50%) " : ""}translateY(${y}px) scale(${p * s})`;
+  return o;
+}
+
+/* ---------- HUD: players and stage ---------- */
+const hud = el("div", "abs", SHELL.frame); SHELL.frame.insertBefore(hud, SHELL.vig);
+Object.assign(hud.style, { left: 0, top: 0, width: "1920px", height: "220px", zIndex: 22 });
+const STAGES = { fee: "STAGE 1　手續費", wire: "STAGE 2　機票錢", tax: "STAGE 3　海關", estate: "BOSS　遺產稅傳言", safe: "STAGE 5　防禦力", choose: "RESULT　怎麼選", end: "NEXT LEVEL" };
+const stageLab = Object.fromEntries(Object.entries(STAGES).map(([k, s]) => [k, T(hud, s, 46, 960, 140, { color: GOLD })]));
+
+/* ---------- new-word popups ---------- */
+const word = (w, def) => { const b = Box(SHELL.frame, 560, 724, 800, 112, GOLD); b.style.zIndex = 23; T(b, "NEW WORD!", 26, 60, 6, { color: GOLD, cls: "ar" }); T(b, `${w}`, 52, 60, 36, { cls: "ar" }); const d = T(b, def, 36, 760, 50, { cls: "ar", color: "#cfd8ff" }); d.style.transform = "translateX(-100%)"; return b; };
+const WORDS = [["券商", "幫你下單買股票的店", 4], ["複委託", "透過台灣券商＝找代購", 6], ["海外券商", "直接在美國開戶＝自己飛", 7], ["手續費", "每買賣一次付的錢", 8], ["電匯", "銀行的國際匯款", 12], ["股利", "公司發給股東的錢", 20], ["SIPC", "美國券商倒閉時的保護", 28]]
+  .map(([w, def, i]) => { const a0 = cue(W(i, w, 0), "magic", .6); return { e: word(w, def), a0, a1: Math.max(E(i) + .2, a0 + 2.4) }; });
+
+/* ---------- scenes ---------- */
+const S = LAYER;
+// hook: you and an Apple share across the Pacific, then VS and the warning
+const YOU = `<circle cx="100" cy="100" r="90" fill="${GOLD}"/><text x="100" y="125" text-anchor="middle" font-family="NotoSC" font-weight="900" font-size="70" fill="#c98a12">你</text>`;
+const hArc = put(S.hook, 1920, 1080, `<path d="M350 510 Q960 100 1570 510" stroke="#fff" stroke-width="10" fill="none" stroke-dasharray="26 18"/>`, 0, 0);
+const hStock = Box(S.hook, 1380, 380, 380, 260, GOLD); T(hStock, "蘋果股票", 64, 184, 40); T(hStock, "AAPL", 56, 184, 140, { color: GOLD });
+const hYou = put(S.hook, 200, 200, YOU, 250, 410);
+const hTw = T(S.hook, "台北", 60, 350, 650, { color: CYAN }), hNy = T(S.hook, "紐約", 60, 1570, 680, { color: CYAN });
+const vs1 = put(S.hook, 200, 200, p1Art(), 380, 330), vs2 = put(S.hook, 200, 200, p2Art(), 1340, 330);
+const vsN1 = T(S.hook, "找代購", 70, 480, 560, { color: P1C }), vsN2 = T(S.hook, "自己飛", 70, 1440, 560, { color: P2C });
+const vs = T(S.hook, "VS", 200, 960, 300, { color: GOLD });
+const warn = Box(S.hook, 460, 680, 1000, 150, "#ff4d6d"); T(warn, "WARNING　選錯路：每年多付好幾千", 52, 500, 42, { color: "#ff4d6d" });
+const B = {
+  vs: cue(W(1, "兩條路", 0), "boom", .8), warn: cue(W(2, "多付", 0), "wrong"),
+  apple: cue(W(0, "蘋果", 0), "pop"), fly: cue(W(0, "飛過", 0), "whoosh"),
+};
+function rHook(t) {
+  const off = B.vs;
+  const out = off - .2;
+  popE(hYou, t, L(0) + .1, out, { c: false }); popE(hTw, t, L(0) + .2, out); popE(hStock, t, B.apple, out, { c: false }); popE(hNy, t, B.apple + .1, out);
+  hArc.style.opacity = popA(t, B.fly, out, .2);
+  const u = eio(prog(t, B.fly, 1.2));
+  place(hYou, (1 - u) ** 2 * 350 + 2 * u * (1 - u) * 960 + u * u * 1570 - 100, (1 - u) ** 2 * 510 + 2 * u * (1 - u) * 100 + u * u * 510 - 100);
+  [vs1, vs2].forEach((v, k) => { const x = (1 - eo(prog(t, off, .5))) * (k ? 900 : -900); v.style.transform = `translateX(${x}px) translateY(${bob(t, k, 8, 5)}px)`; v.style.opacity = t > off ? 1 : 0; });
+  popE(vsN1, t, off + .3); popE(vsN2, t, off + .3); popE(vs, t, off + .2, 1e9, { s: 1 + .05 * Math.sin(t * 8) });
+  popE(warn, t, B.warn, 1e9, { c: false }); warn.style.transform += ` translateX(${settle(t - B.warn, 14, 6, 4)}px)`;
+}
+
+// basics: tutorial map
+const tYou = put(S.basics, 200, 200, YOU, 160, 400);
+const tEx = Box(S.basics, 1420, 340, 360, 320, CYAN); T(tEx, "交易所", 70, 180, 110);
+const tShop = Box(S.basics, 780, 380, 360, 240, GOLD); T(tShop, "券商", 80, 180, 70);
+const arrowD = put(S.basics, 1060, 80, `<path d="M0 40 L1000 40" stroke="#fff" stroke-width="12" stroke-dasharray="30 20"/><path d="M1000 10 L1060 40 L1000 70 Z" fill="#fff"/>`, 360, 460);
+const noEntry = T(S.basics, "NO ENTRY ✗", 64, 1000, 660, { color: "#ff4d6d" });
+const tw2 = T(S.basics, "台股 → 台灣券商", 72, 960, 330, { color: P1C }), us2 = T(S.basics, "美股 → 兩種買法", 72, 960, 520, { color: P2C });
+Object.assign(B, { ex: cue(W(3, "交易所", 0), "pop"), no: cue(W(4, "不讓", 0), "wrong"), shop: cue(W(4, "一家店", 0), "pop"), two: cue(W(5, "美國股票", 0), "ding") });
+function rBasics(t) {
+  const out = F(5, .05);
+  popE(tYou, t, L(3) - .3, out, { c: false }); popE(tEx, t, B.ex, out, { c: false });
+  arrowD.style.opacity = popA(t, B.ex + .3, B.shop, .2); popE(noEntry, t, B.no, B.shop + .9);
+  popE(tShop, t, B.shop, out, { c: false, y: -40 * (1 - eo(prog(t, B.shop, .5))) });
+  popE(tw2, t, out + .2); popE(us2, t, B.two);
+}
+
+// routes: the order path, changed in place
+const node = (text, color) => { const b = Box(S.routes, 0, 380, 300, 200, color); T(b, text, 56, 144, 64, { color }); return b; };
+const rYou = put(S.routes, 200, 200, YOU, 130, 380);
+const rTw = node("台灣券商", P1C), rUs = node("美國券商", P2C), rEx = node("交易所", CYAN);
+const arrow = (color) => {
+  const e = el("div", "abs", S.routes); Object.assign(e.style, { height: "12px", top: "474px", background: color, borderRadius: "6px" });
+  const h = el("div", "abs", e); Object.assign(h.style, { right: "-26px", top: "-14px", width: 0, height: 0, borderTop: "20px solid transparent", borderBottom: "20px solid transparent", borderLeft: `28px solid ${color}` });
+  return (x0, x1, o) => { e.style.left = x0 + 10 + "px"; e.style.width = Math.max(0, x1 - x0 - 46) + "px"; e.style.opacity = o; };
+};
+const aYouTw = arrow(P1C), aTwUs = arrow(P1C), aUsEx = arrow("#fff"), aYouUs = arrow(P2C);
+const rP1 = put(S.routes, 200, 200, p1Art(), 130, 150), rP2 = put(S.routes, 200, 200, p2Art(), 130, 150);
+const lbTrust = T(S.routes, "再委託美國券商", 48, 950, 640, { color: P1C }), lbWire = T(S.routes, "自己匯錢過去", 48, 560, 640, { color: P2C });
+Object.assign(B, { c1: cue(W(6, "複委託", 0), "pop"), c2: cue(W(7, "海外券商", 0), "pop"),
+  rTw: cue(W(6, "台灣券商", 0), "pop"), rUs: cue(W(6, "委託美國", 0), "pop"), wire7: cue(W(7, "匯過去", 0), "whoosh") });
+function rRoutes(t) {
+  const m = eio(prog(t, B.c2 - .3, .8)), usX = lerp(1050, 760, m);
+  popE(rYou, t, L(6) - .3, 1e9, { c: false }); popE(rEx, t, L(6) - .2, 1e9, { c: false }); place(rEx, 1530, 380);
+  popE(rTw, t, B.rTw, B.c2 - .3, { c: false }); place(rTw, 560, 380);
+  popE(rUs, t, B.rUs, 1e9, { c: false }); place(rUs, usX, 380);
+  popE(rP1, t, B.c1, B.c2 - .3, { c: false }); popE(rP2, t, B.c2, 1e9, { c: false });
+  aYouTw(330, 560, popA(t, B.rTw + .2, B.c2 - .3, .2)); aTwUs(860, 1050, popA(t, B.rUs + .2, B.c2 - .3, .2));
+  aUsEx(usX + 300, 1530, popA(t, B.rUs + .4, 1e9, .2)); aYouUs(330, usX, popA(t, B.wire7, 1e9, .2));
+  popE(lbTrust, t, B.rUs + .2, B.c2 - .3); popE(lbWire, t, B.wire7, 1e9);
+}
+
+// lanes shared by fee and wire: P1 runs on the top lane, P2 on the bottom lane
+function lanes(parent) {
+  const g = {};
+  g.bg1 = put(parent, 1500, 220, `<rect x="0" y="0" width="1500" height="220" rx="30" fill="rgba(255,90,79,.18)" stroke="${P1C}" stroke-width="5"/>`, 210, 250);
+  g.bg2 = put(parent, 1500, 220, `<rect x="0" y="0" width="1500" height="220" rx="30" fill="rgba(63,140,255,.18)" stroke="${P2C}" stroke-width="5"/>`, 210, 540);
+  g.p1 = put(parent, 200, 200, p1Art(), 230, 260, { origin: "50% 100%" });
+  g.p2 = put(parent, 200, 200, p2Art(), 230, 550, { origin: "50% 100%" });
+  return g;
+}
+// fee
+const fee = lanes(S.fee);
+const zero = T(S.fee, "$0", 170, 1150, 540, { color: CYAN });
+const pct = T(S.fee, "約 0.1%", 110, 1000, 270, { color: GOLD });
+const pctEg = T(S.fee, "US$1,000 → 約 US$1", 46, 1420, 310, { color: "#fff" });
+const ticketQ = T(S.fee, "還有機票錢？", 120, 960, 420, { color: GOLD });
+Object.assign(B, { zero: cue(W(9, "零手續費", 0), "cash"), pct: cue(W(10, "千分之一", 0), "pop"), eg: W(10, "一千美元", 0), tq: cue(W(11, "機票錢", 0), "boing") });
+function rFee(t) {
+  idle(fee.p1, t); idle(fee.p2, t);
+  const out = B.tq - .2;
+  popE(zero, t, B.zero, out); popE(pct, t, B.pct, out); popE(pctEg, t, B.eg, E(10)); popE(ticketQ, t, B.tq, 1e9, { y: settle(t - B.tq, -20, 3, 3) });
+  [fee.bg1, fee.bg2, fee.p1, fee.p2].forEach((e) => { e.style.opacity = 1 - prog(t, out, .3); });
+}
+
+// wire: shot 1 = race with toll gates; shot 2 = yearly cost bars
+const wShot1 = el("div", "abs", S.wire), wShot2 = el("div", "abs", S.wire);
+[wShot1, wShot2].forEach((s) => Object.assign(s.style, { left: 0, top: 0, width: "1920px", height: "1080px" }));
+const wire = lanes(wShot1);
+const gates = [[640, "－匯出手續費"], [1000, "－中轉行費用"], [1360, "－出金 US$25"]].map(([x, s], k) => {
+  const g = put(wShot1, 60, 230, `<rect x="0" y="0" width="60" height="230" rx="10" fill="${k === 2 ? GOLD : "#ff4d6d"}"/><rect x="10" y="10" width="40" height="210" rx="6" fill="${NAVY}" opacity=".5"/>`, x, 540);
+  return { g, x, lab: T(wShot1, s, 46, x + 30, 820, { color: k === 2 ? GOLD : "#ff4d6d" }) };
+});
+const hpBar = (y, color) => { const o = Box(wShot1, 1290, y, 420, 40, color); const f = el("div", "abs", o); Object.assign(f.style, { left: "4px", top: "4px", height: "20px", width: "400px", background: color, borderRadius: "8px" }); return f; };
+const hp1 = hpBar(220, P1C), hp2 = hpBar(500, P2C);
+const p1ok = T(wShot1, "台幣直接扣款 ✓", 52, 1000, 300, { color: "#7dffa1" });
+Object.assign(B, { run: cue(F(13, .1), "whoosh"), back: cue(W(14, "二十五", -.3), "whoosh"), p1run: cue(W(15, "不用", 0), "whoosh") });
+B.hits = [B.run + D(13) * .8 * (640 - 230) / 1260, B.run + D(13) * .8 * (1000 - 230) / 1260, B.back + .9];
+B.hits.forEach((h) => cue(h, "wrong", .8));
+const cost = { a: Box(wShot2, 520, 0, 260, 0, P1C), b: Box(wShot2, 1140, 0, 260, 0, P2C) };
+cost.a.style.background = P1C; cost.b.style.background = P2C;
+const costT1 = T(wShot2, "一年成本（每月投 US$300）", 56, 960, 170, { color: CYAN }), costT2 = T(wShot2, "一年成本（錢多・一年匯一兩次）", 56, 960, 170, { color: GOLD });
+const costLa = T(wShot2, "一百多台幣", 48, 650, 0, { color: "#fff" }), costLb = T(wShot2, "上千～好幾千", 48, 1270, 0, { color: "#fff" });
+T(wShot2, "找代購", 46, 650, 780, { color: P1C }); T(wShot2, "自己飛", 46, 1270, 780, { color: P2C });
+const dialLo = T(wShot2, "錢少、常常買：找代購省", 46, 960, 270, { color: "#7dffa1" });
+Object.assign(B, { ca: cue(W(16, "一百多", 0), "pop"), cb: cue(W(17, "上千", 0), "boom", .7), dial: F(18, .1), dialHi: cue(W(18, "錢多", 0), "boing") });
+function rWire(t) {
+  shots(t, [[wShot1, L(12) - 1], [wShot2, L(16) - .3]], .3);
+  // P2 runs right then back; P1 waits, then dashes through with no gates on its lane
+  const go = eio(prog(t, B.run, D(13) * .8)), ret = eio(prog(t, B.back, 2.2));
+  wire.p2.style.left = lerp(230, 1490, go) - ret * 1260 + "px";
+  wire.p2.style.transform = `translateY(${-Math.abs(Math.sin(t * 9)) * 18 * (go > 0 && go < 1 || ret > 0 && ret < 1 ? 1 : 0)}px) scaleX(${ret > 0 ? -1 : 1})`;
+  const p1x = eio(prog(t, B.p1run, 1.6));
+  wire.p1.style.left = lerp(230, 1490, p1x) + "px";
+  wire.p1.style.transform = `translateY(${-Math.abs(Math.sin(t * 9)) * 18 * (p1x > 0 && p1x < 1 ? 1 : 0)}px)`;
+  gates.forEach((g, k) => { g.g.style.transform = `translateX(${settle(t - B.hits[k], 12, 5, 4)}px)`; popE(g.lab, t, B.hits[k], k < 2 ? B.hits[k] + 2 : B.p1run, { y: -30 * eo(prog(t, B.hits[k], .5)) }); });
+  hp2.style.width = 400 * (1 - .2 * (t > B.hits[0]) - .2 * (t > B.hits[1]) - .25 * (t > B.hits[2])) + "px";
+  popE(p1ok, t, B.p1run + .6, E(15) + .2);
+  const k2 = 1 - prog(t, B.p1run - .2, .3); [wire.bg2, wire.p2, hp2.parentNode].forEach((e) => { e.style.opacity = k2; }); gates.forEach((g) => { g.g.style.opacity = k2; });
+  // cost bars, then the money dial swaps them
+  const sw = eio(prog(t, B.dialHi, 1.4));
+  const ha = lerp(70, 380, sw) * prog(t, B.ca, .5), hb = lerp(380, 110, sw) * prog(t, B.cb, .5);
+  Object.assign(cost.a.style, { height: ha + "px", top: 740 - ha + "px" }); Object.assign(cost.b.style, { height: hb + "px", top: 740 - hb + "px" });
+  costLa.style.top = 670 - ha + "px"; costLb.style.top = 670 - hb + "px";
+  costLa.style.opacity = prog(t, B.ca, .3) * (1 - prog(t, B.dial, .3)); costLb.style.opacity = prog(t, B.cb, .3) * (1 - prog(t, B.dial, .3));
+  dialLo.style.opacity = popA(t, B.dial, B.dialHi, .25);
+  costT1.style.opacity = 1 - prog(t, B.dialHi, .25); costT2.style.opacity = prog(t, B.dialHi, .25);
+}
+
+// tax: one customs gate for both; bill loading; gains pass; Taiwan doors
+const tx = [0, 1, 2, 3].map(() => { const s = el("div", "abs", S.tax); Object.assign(s.style, { left: 0, top: 0, width: "1920px", height: "1080px" }); return s; });
+const gate = Box(tx[0], 760, 260, 400, 520, GOLD); T(gate, "海關", 90, 196, 40, { color: GOLD });
+const tP1 = put(tx[0], 200, 200, p1Art(), 300, 520), tP2 = put(tx[0], 200, 200, p2Art(), 1420, 520);
+const divCoins = [...Array(10)].map((_, k) => { const x0 = 230 + (k % 5) * 76, y0 = 430 + Math.floor(k / 5) * 76; return { c: put(tx[0], 64, 64, coinIco(64), x0, y0), x0 }; });
+const divLab = T(tx[0], "股利 US$100", 56, 420, 330, { color: GOLD });
+const cut30 = el("div", "dmg", tx[0], "−30%　美國先扣"); place(cut30, 960, 760);
+const left70 = T(tx[0], "到手 US$70", 64, 1560, 330, { color: "#7dffa1" });
+T(tx[1], "台美租稅協定　進度", 60, 960, 180, { color: CYAN });
+const bills = [["眾議院　✓ 已通過", "#7dffa1"], ["參議院　… 待完成", GOLD], ["生效　　✗ 還沒有", "#ff4d6d"]].map(([s, c], k) => { const b = Box(tx[1], 510, 300 + k * 150, 900, 120, c); T(b, s, 54, 60, 26, { color: c, cls: "ar" }); return b; });
+const still30 = T(tx[1], "預扣稅仍是 30%", 46, 960, 790, { color: "#fff" });
+const gainCoin = put(tx[2], 120, 120, coinIco(120), 300, 480);
+const passGate = Box(tx[2], 860, 300, 200, 460, "#7dffa1");
+const pass = T(tx[2], "價差：美國不課稅　PASS", 64, 960, 200, { color: "#7dffa1" });
+T(tx[3], "回到台灣（同一個報稅家庭）", 56, 960, 170, { color: CYAN });
+const door = (y, s, c) => { const b = Box(tx[3], 460, y, 1000, 170, c); T(b, s, 56, 494, 50, { color: c }); return b; };
+const dr1 = door(320, "海外所得達 100 萬 → 要申報", GOLD), dr2 = door(560, "總額超過 750 萬 → 才可能繳稅", "#ff4d6d");
+Object.assign(B, { gate: cue(W(19, "海關", 0), "boom", .7), div: cue(W(20, "領美股", 0), "wrong"), pass: cue(W(22, "價差", 0), "ding"), dr1: cue(W(23, "一百萬", 0), "pop"), dr2: cue(W(23, "七百五十萬", 0), "pop") });
+function rTax(t) {
+  shots(t, [[tx[0], L(19) - 1], [tx[1], L(21) - .3], [tx[2], L(22) - .3], [tx[3], L(23) - .3]], 0);
+  popE(gate, t, B.gate, 1e9, { c: false });
+  [tP1, tP2].forEach((p, k) => { p.style.transform = `translateX(${eo(prog(t, B.gate, .8)) * (k ? -260 : 260)}px) translateY(${bob(t, k, 6, 5)}px)`; p.style.opacity = 1 - prog(t, L(20) - .4, .3); });
+  const go = eio(prog(t, B.div, 1.4));
+  divCoins.forEach(({ c, x0 }, k) => { const kept = k < 7; c.style.left = x0 + (kept ? 1150 * go : Math.min(1150 * go, 690 - x0 - (9 - k) * 70)) + "px"; c.style.opacity = popA(t, L(20) - .1, kept ? 1e9 : B.div + 2.2, .3); });
+  popE(divLab, t, L(20) - .1, B.div); popE(cut30, t, B.div + .7); popE(left70, t, B.div + 1.2);
+  bills.forEach((b, k) => popE(b, t, F(21, .2 + k * .22), 1e9, { c: false }));
+  popE(still30, t, F(21, .7));
+  gainCoin.style.left = lerp(300, 1500, eio(prog(t, L(22), 1.6))) + "px";
+  popE(pass, t, L(22) + .1);
+  popE(dr1, t, B.dr1, 1e9, { c: false }); popE(dr2, t, B.dr2, 1e9, { c: false });
+}
+
+// estate: boss fight
+const boss = put(S.estate, 360, 360, `<path d="M40 330 Q20 120 180 40 Q340 120 320 330 Q290 300 260 330 Q230 300 200 330 Q170 300 140 330 Q110 300 80 330 Q60 300 40 330 Z" fill="#9b5cff"/>
+  <circle cx="130" cy="160" r="34" fill="#fff"/><circle cx="230" cy="160" r="34" fill="#fff"/><circle cx="138" cy="166" r="14" fill="${NAVY}"/><circle cx="222" cy="166" r="14" fill="${NAVY}"/>
+  <path d="M120 240 Q180 210 240 240" stroke="${NAVY}" stroke-width="10" fill="none"/>`, 1300, 290, { origin: "50% 100%" });
+const bossTalk = Box(S.estate, 300, 300, 820, 150, "#9b5cff"); T(bossTalk, "找代購就能避開遺產稅？", 56, 410, 38, { color: "#e9d9ff" });
+const bossHp = Box(S.estate, 1300, 250, 360, 30, "#ff4d6d"); const bossHpF = el("div", "abs", bossHp); Object.assign(bossHpF.style, { left: "3px", top: "3px", height: "14px", width: "342px", background: "#ff4d6d", borderRadius: "6px" });
+const line60 = Box(S.estate, 200, 520, 900, 220, GOLD); T(line60, "US$60,000 以上", 70, 450, 30, { color: GOLD }); T(line60, "就要向美國申報遺產稅", 46, 450, 130);
+const irsHit = Box(S.estate, 260, 300, 900, 200, CYAN); T(irsHit, "國稅局：登記在別人名下，", 50, 450, 30, { color: CYAN }); T(irsHit, "一樣算美國資產", 50, 450, 110, { color: "#fff" });
+const ko = T(S.estate, "K.O.", 200, 1480, 360, { color: GOLD });
+const tip = T(S.estate, "錢變多 → 找專業稅務顧問", 72, 960, 440, { color: "#7dffa1" });
+Object.assign(B, { e60: cue(W(24, "六萬", 0), "thud"), rumor: cue(W(25, "有人說", 0), "boing"), irs: cue(W(25, "國稅局", 0), "boom"), ko: cue(W(26, "別把", 0), "magic") });
+function rEstate(t) {
+  boss.style.opacity = 1 - prog(t, B.ko, .5);
+  boss.style.transform = `translateY(${bob(t, 2, 12, 2.5)}px) rotate(${settle(t - B.irs, 10, 4, 3)}deg) scale(${1 - .4 * prog(t, B.ko, .5)})`;
+  bossHp.style.opacity = 1 - prog(t, B.ko, .3);
+  bossHpF.style.width = 342 * (1 - eo(prog(t, B.irs + .2, .8))) + "px";
+  popE(line60, t, B.e60 - .2, B.rumor - .2, { c: false });
+  popE(bossTalk, t, B.rumor, Math.max(B.irs, B.rumor + 2), { c: false });
+  popE(irsHit, t, Math.max(B.irs, B.rumor + 2), B.ko, { c: false });
+  popE(ko, t, B.ko, B.ko + 1.6); popE(tip, t, B.ko + 1.5);
+}
+
+// safe: shields
+const sP1 = put(S.safe, 200, 200, p1Art(), 420, 470), sP2 = put(S.safe, 200, 200, p2Art(), 1300, 470);
+const shield = (x, c, a, b) => { const s = put(S.safe, 300, 340, `<path d="M150 0 L300 50 Q300 250 150 340 Q0 250 0 50 Z" fill="${c}" opacity=".35" stroke="${c}" stroke-width="10"/>`, x, 380); return s; };
+const sh1 = shield(370, P1C), sh2 = shield(1250, P2C);
+const sl1 = T(S.safe, "金管會監督・講中文", 50, 520, 320, { color: P1C }), sl2 = T(S.safe, "SIPC 最高 US$50萬", 50, 1400, 320, { color: P2C });
+const q = T(S.safe, "錢放在店裡安全嗎？", 70, 960, 230, { color: CYAN });
+Object.assign(B, { sh2: cue(W(28, "保護", 0), "magic"), sh1: cue(W(29, "金管會", 0), "magic") });
+function rSafe(t) {
+  idle(sP1, t); idle(sP2, t); popE(q, t, L(27) - .2, B.sh2 - .2);
+  const out = B.sh1 - .3;
+  popE(sh2, t, B.sh2, out, { c: false }); popE(sl2, t, B.sh2 + .2, out); sP2.style.opacity = 1 - prog(t, out, .3);
+  popE(sh1, t, B.sh1, 1e9, { c: false }); popE(sl1, t, B.sh1 + .2);
+}
+
+// choose: result cards
+const res = (x, html, c) => { const b = Box(S.choose, x, 260, 520, 470, c); const d = T(b, html, 50, 254, 120, { color: "#fff" }); d.style.textAlign = "center"; d.style.lineHeight = "1.5"; return b; };
+const r1 = res(700, "剛開始<br>每月小額<br><span style='color:#ff5a4f'>→ 複委託</span>", P1C);
+const r2 = res(700, "錢多・少匯款<br>想買更多<br><span style='color:#3f8cff'>→ 海外券商</span>", P2C);
+const r3 = res(700, "COMBO<br>小錢代購<br>大錢自己飛", GOLD);
+Object.assign(B, { r1: cue(W(30, "找代購", 0), "pop"), r2: cue(W(31, "自己飛", 0), "pop"), r3: cue(W(32, "一起用", 0), "cash") });
+function rChoose(t) {
+  popE(r1, t, B.r1, B.r2 - .2, { c: false }); popE(r2, t, B.r2, B.r3 - .2, { c: false }); popE(r3, t, B.r3, 1e9, { c: false });
+}
+
+// end
+const nl = Box(S.end, 360, 230, 1200, 360, GOLD); T(nl, "下一關", 56, 594, 40, { color: GOLD }); T(nl, "從零開一個海外券商帳戶", 80, 594, 130);
+const save = T(S.end, "訂閱＝存檔 ★", 64, 960, 680, { color: "#7dffa1" });
+const eP1 = put(S.end, 200, 200, p1Art(), 120, 600), eP2 = put(S.end, 200, 200, p2Art(), 1600, 600);
+Object.assign(B, { nl: cue(W(33, "下一集", 0), "magic"), save: cue(W(33, "訂閱", 0), "ding") });
+function rEnd(t) { popE(nl, t, B.nl, 1e9, { c: false }); popE(save, t, B.save, 1e9, { s: 1 + .04 * Math.sin(t * 6) }); [eP1, eP2].forEach((p, k) => { p.style.transform = `translateY(${-Math.abs(Math.sin(t * 4 + k)) * 40}px)`; }); }
+
+const RENDER = { hook: rHook, basics: rBasics, routes: rRoutes, fee: rFee, wire: rWire, tax: rTax, estate: rEstate, safe: rSafe, choose: rChoose, end: rEnd };
+function render(t) {
+  const key = renderShell(t, { chunks, fade: .25 });
+  const sc = sceneAt(t);
+  RENDER[key](t);
+  if (sc.prev && sc.alpha < 1) RENDER[sc.prev.key](t);
+  // moving grid
+  gridLines.forEach((l, k) => { const z = ((k + (t * .9) % 1) / 10); const y = 520 * z * z; l.setAttribute("x1", 0); l.setAttribute("x2", 1920); l.setAttribute("y1", y); l.setAttribute("y2", y); });
+  // HUD only from the tutorial on; stage title per stage
+  hud.style.opacity = prog(t, L(3) - .5, .3);
+  sun.style.opacity = recede(t, L(3) - .5, .35);
+  const wordOn = Math.max(0, ...WORDS.map((w) => popE(w.e, t, w.a0, w.a1, { c: false })));
+  for (const [k, e] of Object.entries(stageLab)) { const s = SCENES.find((q) => q.key === k); e.style.opacity = popA(t, s.a, s.a + 1.8, .25) * (1 - wordOn); e.style.transform = "translateX(-50%)"; }
+}
+definePage({ render, meta: SHELL.meta });
+</script>
+</body>
+</html>

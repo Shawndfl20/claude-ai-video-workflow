@@ -1,0 +1,67 @@
+/* Hand-drawn style: page shell for a 1080x1920 portrait frame, or 1920x1080 when buildShell({ format: "landscape" })
+   puts the .landscape class on <html>. Look values are CSS custom properties on #frame with the defaults below. A video overrides them in its
+   own <style>, e.g. `#frame { --sub-top: 1200px; --grain: .3; }`. The ids and classes are what shell.js
+   builds and relies on. Fonts come from the kit's .fonts/ folder (tools/fetch-fonts.py). */
+
+@font-face { font-family: "NotoSC"; src: url("../../.fonts/NotoSansSC-Bold.otf"); font-weight: 700; }
+@font-face { font-family: "NotoSC"; src: url("../../.fonts/NotoSansSC-Black.otf"); font-weight: 900; }
+@font-face { font-family: "Kuai"; src: url("../../.fonts/ZCOOLKuaiLe.ttf"); }
+
+* { box-sizing: border-box; }
+html { --frame-w: 1080px; --frame-h: 1920px; }
+html.landscape { --frame-w: 1920px; --frame-h: 1080px; }
+html, body { margin: 0; width: var(--frame-w); height: var(--frame-h); overflow: hidden; }
+body { font-family: "NotoSC", sans-serif; color: #2b2b33; }
+
+#frame {
+  position: absolute; inset: 0; overflow: hidden;
+  /* --sub-top: caption pill top edge, default 1450px (landscape 827px); one portrait caption line ends near 1570, above the Shorts title and channel overlay; keep key art above ~1430 (landscape: inside x 150-1770, y 130-797) */
+  /* --sub-size: caption size, default 52px (portrait: one line, at most 14 CJK characters, makeChunks({ maxChars: 14 })); landscape 64px */
+  --sub-bg: rgba(255, 255, 255, .95);
+  --sub-color: #23232b;
+  --grain: .55;                       /* paper grain opacity, 0 turns it off */
+  --vignette: rgba(0, 0, 0, .18);     /* edge darkening, transparent turns it off */
+}
+
+/* #bg shows the previous scene's background, .bg-in fades the current one in over it. */
+#bg, #bg > .bg-in { position: absolute; inset: 0; }
+
+.abs { position: absolute; }
+.scene { position: absolute; inset: 0; opacity: 0; }
+/* Camera container (also usable as a full-frame "shot" layer): cam() zooms and pans it about a focus
+   point, so its transform origin must be the top-left corner. */
+.cam { position: absolute; left: 0; top: 0; width: var(--frame-w); height: var(--frame-h); transform-origin: 0 0; }
+/* Hand-lettered keyword, centred on its left coordinate. */
+.kw { position: absolute; font-family: "Kuai", "NotoSC", sans-serif; white-space: nowrap; transform: translateX(-50%); text-align: center; line-height: 1; }
+
+#sub { position: absolute; left: 0; right: 0; top: var(--sub-top, 1450px); text-align: center; z-index: 30; }
+/* Landscape captions: at most 16 characters a screen (makeChunks({ maxChars: 16 }); Netflix's Traditional Chinese line
+   limit), large enough to read when a phone shows the 1920 frame about 390 px wide. The bottom edge sits 120 px above the
+   frame edge, clear of the player's progress bar and buttons. */
+.landscape #sub { top: var(--sub-top, 827px); }
+.landscape #subText { font-size: var(--sub-size, 64px); }
+/* The pill. line-height is explicit so the caption fit check can count lines from its height. */
+#subText {
+  display: inline-block; background: var(--sub-bg); color: var(--sub-color);
+  padding: 20px 38px; border-radius: 22px; font-size: var(--sub-size, 52px); font-weight: 700; line-height: 1.45;
+  box-shadow: 0 8px 0 rgba(0, 0, 0, .12);
+}
+
+/* Film subtitles (buildShell({ caption: { style: "film" } })): the MV look, white bold sans with a dark outline, no pill.
+   Pair with makeChunks({ plain: true }) and maxLines 1 so each caption is one line without , . ; : */
+#sub.film { left: 60px; right: 60px; top: var(--film-top, 1490px); }
+.landscape #sub.film { top: var(--film-top, 870px); }
+#sub.film #subText {
+  background: none; box-shadow: none; padding: 0; border-radius: 0;
+  font-family: "NotoSC", sans-serif; font-size: var(--film-size, 60px); font-weight: 700; line-height: 1.25;
+  color: #fff; -webkit-text-stroke: 9px #1d1d24; paint-order: stroke fill;
+}
+.landscape #sub.film #subText { font-size: var(--film-size, 72px); }
+
+#grain { position: absolute; inset: 0; z-index: 25; pointer-events: none; mix-blend-mode: multiply; opacity: var(--grain); }
+#vig { position: absolute; inset: 0; z-index: 24; pointer-events: none; background: radial-gradient(900px 1300px at 50% 45%, transparent 60%, var(--vignette)); }
+.landscape #vig { background: radial-gradient(1500px 850px at 50% 45%, transparent 60%, var(--vignette)); }
+
+svg { overflow: visible; display: block; }
+/* Wrap an art body in <g class="rough"> for the fixed-seed wobbly outline (filter built by buildShell). */
+.rough { filter: url(#rough); }

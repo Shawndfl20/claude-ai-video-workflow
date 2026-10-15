@@ -1,0 +1,8 @@
+{
+  "page": "video.html",
+  "lines": "lines-video.json",
+  "voice": { "provider": "hume" },
+  "poster": 0.6,
+  "maxSeconds": 180,
+  "workers": 4
+}

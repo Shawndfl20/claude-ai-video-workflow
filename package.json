@@ -1,0 +1,16 @@
+{
+  "name": "ai-video-workflow",
+  "private": true,
+  "type": "module",
+  "description": "Code-rendered explainer videos for YouTube: script, voice, check, mix, render.",
+  "engines": { "node": ">=20" },
+  "scripts": {
+    "setup": "bash scripts/setup.sh",
+    "make": "node kit/tools/make.mjs",
+    "preview": "node kit/tools/preview.mjs",
+    "check": "node kit/tools/check.mjs"
+  },
+  "devDependencies": {
+    "playwright": "1.56.1"
+  }
+}
