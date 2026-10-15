@@ -1,19 +1,31 @@
-# ai-video-workflow
+# claude-ai-video-workflow
 
 用代码和 AI 做 YouTube 视频的工具仓库：脚本、配音、画面、音效都在这里生成，一条命令出片。不预设频道和选题，你的频道设定写在本地的 `channel.md`（不入库，见 [AGENTS.md](AGENTS.md)）。流程与标准见 [docs/workflow.md](docs/workflow.md)。
 
-画面是 HTML + SVG 页面，由时间 `t` 决定每一帧；旁白按句生成并排出时间轴，画面上的每个动作都挂在旁白的某个词上。渲染器逐帧截图，编码成 H.264 视频：竖屏 Shorts 或横屏长视频。
+画面是 HTML + SVG 页面，由时间 `t` 决定每一帧；旁白（自己生成后导入，或经 TTS API）排出逐句时间轴，画面上的每个动作都挂在旁白的某个词上。渲染器逐帧截图，编码成 H.264 视频：竖屏 Shorts 或横屏长视频。
+
+## 效果参考
+
+用 Claude Opus 5.5 写代码做的动画视频：
+
+- [博物馆沉浸式风格的视频](https://x.com/KeWai386772/status/2107253459624046855)
+- [穿越中国史](https://x.com/miles_mazy/status/2108531674380431374)
+- [The story of the One Ring](https://x.com/kevin_t_ngo/status/2110385144846840172)
+
+用本仓库做的：
+
+- Shorts：[為什麼你的錢變少了？3分鐘看懂通膨](https://youtube.com/shorts/-hf666obn7Y)
+- 横屏长视频：[复委托 vs 海外券商](https://youtu.be/MsbrNLv3h5s)
 
 ## 快速开始
 
 ```bash
 bash scripts/setup.sh                 # Playwright + Chromium、Python venv、字体（可重复运行）
 bash scripts/fetch-models.sh          # 可选：离线语音识别模型（中/英），用于读音核对和导入旁白时切句
-export AIML_API_KEY=...               # MiniMax（中文）/ Hume（英文）配音用
 
 cp -r templates/shorts videos/2026-11-my-topic     # 横屏长视频用 templates/landscape
-# 改 lines-video.json（台词）和 video.html（画面）
-node kit/tools/make.mjs videos/2026-11-my-topic --draft   # 配音 → 读音核对 → 检查 → 混音 → 拼板
+# 改 lines-video.json（台词）和 video.html（画面）；按台词生成旁白，存成 narration.mp3 放进文件夹
+node kit/tools/make.mjs videos/2026-11-my-topic --draft   # 导入旁白 → 读音核对 → 检查 → 混音 → 拼板
 node kit/tools/make.mjs videos/2026-11-my-topic           # 再渲染出成片 build/video.mp4
 ```
 
@@ -46,14 +58,15 @@ scripts/        环境安装、模型下载
 
 ## 配音
 
-| 提供方 | 用途 | 需要 |
-| --- | --- | --- |
-| `minimax` | MiniMax Speech 2.8 HD；`video.json` 的 `voice` 可设 `voiceName`、`emotion`、`languageBoost`、`speed` | `AIML_API_KEY` |
-| `hume` | Hume Octave 2（英文），默认音色 "Sitcom Girl"，可用 `voiceName` 改 | `AIML_API_KEY` |
-| `kokoro` | 离线草稿或备用（Kokoro v1.1，Apache-2.0） | `fetch-models.sh --voice` |
-| `file` | 用户在别处生成的旁白（例如配音网站的网页版），按停顿和台词切成逐句时间轴 | 音频文件；建议 `fetch-models.sh`（按识别结果切句更准） |
+用什么服务、什么模型、什么音色由用户决定，仓库不写死。`video.json` 的 `voice` 选一种方式：
 
-配音按句缓存在 `kit/build/voice/`，改一句只重配这一句。读音核对用离线识别模型把配音转回文字，和台词逐句比对。数字、人名、多音字最容易出问题。
+| `provider` | 用途 | 需要 |
+| --- | --- | --- |
+| `file`（默认） | 用户自己生成的旁白（例如配音网站的网页版导出的音频），按停顿和台词切成逐句时间轴 | 音频文件；建议 `fetch-models.sh`（按识别结果切句更准） |
+| `api` | 用户选的 TTS 服务：`url`、`model`、`params`（音色、语速等原样发给服务）、`keyEnv`（存密钥的环境变量名） | 用户自己的 API 密钥 |
+| `kokoro` | 离线草稿配音，不花钱 | `fetch-models.sh --voice` |
+
+API 配音按句缓存在 `kit/build/voice/`，改一句只重配这一句。读音核对用离线识别模型把配音转回文字，和台词逐句比对。数字、人名、多音字最容易出问题。
 
 **换语言、字体、配音、画幅：** 仓库内置的是做过的组合，换成别的按 [AGENTS.md](AGENTS.md) 的「改变一个变量」在对应位置加上。
 

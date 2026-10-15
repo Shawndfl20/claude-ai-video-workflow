@@ -96,12 +96,12 @@ DOM 加内联 SVG，1080×1920 竖屏或 1920×1080 横屏画框，纸张颗粒�
 - `FFMPEG`：带 libx264 的 ffmpeg；
 - `PYTHON`：默认 `.venv/bin/python`；
 - `VIDEO_MODELS`：离线模型目录；
-- `AIML_API_KEY`：配音密钥。
+- 用 API 配音时：`video.json` 的 `voice.keyEnv` 指定的环境变量存密钥。
 
 | 命令 | 作用 |
 | --- | --- |
-| `make.mjs <视频文件夹> [--voice minimax\|hume\|kokoro\|file] [--skip-voice] [--draft] [--from --to] [--workers n] [--max-seconds n]` | 一条命令出片：配音 → 读音核对（有模型时）→ 页面检查 → 音效混音 → 拼板 → 渲染 → 成片检查。读 `video.json` |
-| `build-voice.py <lines> --timeline <out> --voice <wav> [--provider minimax\|hume] [--pron] [--voice-name] [--dry-run]` | 经 AIML 配音并排时间轴。MiniMax（中文，`Wise_Woman`、`happy`、语速 1.2，支持逐句 `speed` 和读音表）；Hume Octave 2（英文，默认 "Sitcom Girl"）。按"台词 + 参数"缓存在 `kit/build/voice/`。`--dry-run` 不调用接口，按语速估算 |
+| `make.mjs <视频文件夹> [--voice file\|api\|kokoro] [--skip-voice] [--draft] [--from --to] [--workers n] [--max-seconds n]` | 一条命令出片：配音 → 读音核对（有模型时）→ 页面检查 → 音效混音 → 拼板 → 渲染 → 成片检查。读 `video.json` |
+| `build-voice.py <lines> --timeline <out> --voice <wav> --config video.json [--cache-dir] [--dry-run]` | 经用户选的 TTS API 逐句配音并排时间轴。服务、模型、参数、密钥变量名都来自 `video.json` 的 `voice`（`url`、`model`、`params`、`keyEnv`），不写死；回复的音频可以是文件、链接、base64 或 hex。按"服务 + 模型 + 台词 + 参数"缓存在 `kit/build/voice/`。`--dry-run` 不调用接口，按字数估算时长 |
 | `voice-kokoro.py <lines> --timeline <out> --voice <wav> [--sid 3] [--speed 1.25]` | 离线 Kokoro 配音，输出格式相同 |
 | `import-voice.py <lines> <音频...> --timeline <out> --voice <wav> [--models] [--lang zh\|en]` | 导入在别处生成的旁白（mp3/wav/m4a，可多个文件按顺序）：在停顿处切成逐句，写出与 `build-voice.py` 相同格式的时间轴和 24 kHz WAV。有离线识别模型时按识别结果对齐台词，否则只按句长，并打印每句长度与字数比例（`!` 表示偏差大）。`video.json` 的 `voice.provider: "file"` 由 `make.mjs` 调用它 |
 | `asr-check.py <timeline> [--wav] [--lang zh\|en]` | 读音核对：离线识别每句配音，打印和台词不一致的句子 |

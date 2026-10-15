@@ -1,8 +1,17 @@
 {
-  "page": "gold.html",
-  "lines": "lines-gold.json",
-  "voice": { "provider": "hume" },
-  "poster": 0.9,
-  "maxSeconds": 180,
-  "workers": 4
+ "page": "gold.html",
+ "lines": "lines-gold.json",
+ "voice": {
+  "provider": "api",
+  "url": "https://api.aimlapi.com/v1/tts",
+  "keyEnv": "AIML_API_KEY",
+  "model": "hume/octave-2",
+  "params": {
+   "voice": "Sitcom Girl",
+   "format": "wav"
+  }
+ },
+ "poster": 0.9,
+ "maxSeconds": 180,
+ "workers": 4
 }

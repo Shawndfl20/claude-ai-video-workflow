@@ -25,7 +25,6 @@ import argparse
 import difflib
 import os
 import re
-import subprocess
 import sys
 import wave
 
@@ -34,8 +33,8 @@ import numpy as np
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "lib"))
 from timing import read_lines, write_timeline  # noqa: E402
 import asr  # noqa: E402
+from audio import RATE, decode  # noqa: E402
 
-RATE = 24000                 # Hz, as build-voice.py
 ASR_RATE = 16000             # Hz the recognisers expect
 HOP = 0.01                   # s per loudness frame
 MIN_PAUSE = 0.12             # s under the speech level that counts as a pause
@@ -51,19 +50,6 @@ FLAG_LOW, FLAG_HIGH = 0.6, 1.6  # line length / text share outside this range is
 CJK = re.compile(r"[㐀-鿿豈-﫿]")
 LATIN = re.compile(r"[A-Za-z0-9]")
 LATIN_WEIGHT = 0.3           # a Latin letter or digit takes about 0.3 of the time of a CJK character (18.5 vs 5.6 /s)
-
-
-def decode(path):
-    """Any audio file → 24 kHz mono int16 samples, through ffmpeg."""
-    ffmpeg = os.environ.get("FFMPEG", "ffmpeg")
-    try:
-        r = subprocess.run([ffmpeg, "-v", "error", "-i", path, "-f", "s16le", "-ac", "1", "-ar", str(RATE), "-"],
-                           capture_output=True, check=False)
-    except FileNotFoundError:
-        sys.exit(f'ffmpeg not found ("{ffmpeg}"); set FFMPEG')
-    if r.returncode != 0 or not r.stdout:
-        sys.exit(f"{path}: ffmpeg could not decode it: {r.stderr.decode(errors='replace').strip()}")
-    return np.frombuffer(r.stdout, dtype="<i2")
 
 
 def weight(text):

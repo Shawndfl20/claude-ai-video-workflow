@@ -1,19 +1,20 @@
 // One command from a video folder to a checked MP4:
 //   voice → (read-back check) → page check → sound effects mix → contact sheet → render → video check.
 //
-// Usage: node kit/tools/make.mjs <video folder> [--voice minimax|hume|kokoro|file] [--skip-voice] [--draft]
+// Usage: node kit/tools/make.mjs <video folder> [--voice file|api|kokoro] [--skip-voice] [--draft]
 //                                [--from s --to s] [--workers n] [--max-seconds n]
 //
 // The folder holds video.json:
 //   { "page": "gold.html", "lines": "lines-gold.json",
-//     "voice": { "provider": "hume" | "minimax" | "kokoro" | "file", "pron": "pron.json"?, "voiceName": "..."?, "sid": 3?, "speed": 1.25?,
-//                "emotion": "happy"?, "languageBoost": "Chinese"?,   // MiniMax: voiceName = voice_id, emotion, language hint
-//                "files": ["narration.mp3"]? },   // "file": narration made elsewhere (e.g. a TTS website), cut into lines by import-voice.py
+//     "voice": one of
+//       { "provider": "file", "files": ["narration.mp3", ...] }   narration the user made (e.g. on a TTS website), the default
+//       { "provider": "api", "url": "...", "keyEnv": "ENV_NAME", "model": "...", "params": {...} }   a TTS API the user chose
+//       { "provider": "kokoro", "sid": 3?, "speed": 1.25? }   offline draft voice (scripts/fetch-models.sh --voice)
 //     "language": "zh"?,   // narration language for the recogniser (lib/asr.py); default: zh if the script has CJK, else en
 //     "poster": 0.9, "maxSeconds": 180, "workers": 4 }
 // Outputs next to the page: timeline-<name>.json, voice-<name>-vo.wav (narration), voice-<name>.wav (mix);
 // in build/: <name>.mp4, <name>-poster.webp, <name>-sheet.png, sfx.json.
-//   --voice       overrides video.json's provider (minimax/hume need AIML_API_KEY; kokoro is offline; file needs voice.files)
+//   --voice       overrides video.json's provider (file needs voice.files; api needs voice.url/model and its key; kokoro is offline)
 //   --skip-voice  reuse the existing timeline and narration (e.g. after editing only the page)
 //   --draft       stop after the contact sheet (no render)
 //   --from/--to   render a window only (no video check)
@@ -35,7 +36,7 @@ const { values: o, positionals } = parseArgs({ allowPositionals: true, options: 
   voice: { type: 'string' }, 'skip-voice': { type: 'boolean', default: false }, draft: { type: 'boolean', default: false },
   from: { type: 'string' }, to: { type: 'string' }, workers: { type: 'string' }, 'max-seconds': { type: 'string' },
 } });
-if (positionals.length !== 1) { console.error('usage: node kit/tools/make.mjs <video folder> [--voice minimax|hume|kokoro|file] [--skip-voice] [--draft] [--from s --to s]'); process.exit(2); }
+if (positionals.length !== 1) { console.error('usage: node kit/tools/make.mjs <video folder> [--voice file|api|kokoro] [--skip-voice] [--draft] [--from s --to s]'); process.exit(2); }
 const dir = path.resolve(positionals[0]);
 const cfgPath = path.join(dir, 'video.json');
 if (!fs.existsSync(cfgPath)) { console.error(`make: ${cfgPath} not found (copy templates/shorts to start a video)`); process.exit(2); }
@@ -60,21 +61,18 @@ const tool = (f) => path.join(TOOLS, f);
 const lang = cfg.language ? ['--lang', cfg.language] : [];
 
 if (!o['skip-voice']) {
-  const p = voice.provider || 'kokoro';
-  if (p === 'kokoro') {
+  const p = voice.provider || 'file';
+  if (p === 'file') {
+    const files = voice.files || [];
+    if (!files.length) { console.error('make: voice.provider "file" needs voice.files, e.g. ["narration.mp3"] (the narration you generated, in reading order)'); process.exit(2); }
+    for (const f of files) if (!fs.existsSync(path.join(dir, f))) { console.error(`make: narration file ${path.join(dir, f)} not found: generate the narration from the script and put it there, or draft with --voice kokoro`); process.exit(2); }
+    run('voice (imported narration)', PY, ['-X', 'utf8', tool('import-voice.py'), lines, ...files, '--timeline', timeline, '--voice', narration, '--models', MODELS, ...lang]);
+  } else if (p === 'api') {
+    run('voice (TTS API)', PY, ['-X', 'utf8', tool('build-voice.py'), lines, '--timeline', timeline, '--voice', narration, '--config', 'video.json']);
+  } else if (p === 'kokoro') {
     run('voice (Kokoro, offline)', PY, ['-X', 'utf8', tool('voice-kokoro.py'), lines, '--timeline', timeline, '--voice', narration, '--models', MODELS,
       ...(voice.sid != null ? ['--sid', String(voice.sid)] : []), ...(voice.speed != null ? ['--speed', String(voice.speed)] : [])]);
-  } else if (p === 'minimax' || p === 'hume') {
-    run(`voice (${p}, AIML)`, PY, ['-X', 'utf8', tool('build-voice.py'), lines, '--timeline', timeline, '--voice', narration, '--provider', p,
-      ...(voice.pron ? ['--pron', voice.pron] : []), ...(voice.voiceName ? ['--voice-name', voice.voiceName] : []),
-      ...(p === 'minimax' && voice.speed != null ? ['--speed', String(voice.speed)] : []),
-      ...(voice.emotion ? ['--emotion', voice.emotion] : []), ...(voice.languageBoost ? ['--language-boost', voice.languageBoost] : [])]);
-  } else if (p === 'file') {
-    const files = voice.files || [];
-    for (const f of files) if (!fs.existsSync(path.join(dir, f))) { console.error(`make: narration file ${path.join(dir, f)} not found`); process.exit(2); }
-    if (!files.length) { console.error('make: voice.provider "file" needs voice.files, e.g. ["narration.mp3"]'); process.exit(2); }
-    run('voice (imported narration)', PY, ['-X', 'utf8', tool('import-voice.py'), lines, ...files, '--timeline', timeline, '--voice', narration, '--models', MODELS, ...lang]);
-  } else { console.error(`make: unknown voice provider ${p}`); process.exit(2); }
+  } else { console.error(`make: unknown voice provider ${p} (file, api or kokoro)`); process.exit(2); }
   run('read-back check', PY, ['-X', 'utf8', tool('asr-check.py'), timeline, '--wav', narration, '--models', MODELS, ...lang], { optional: true });
 }
 if (!fs.existsSync(path.join(dir, timeline))) { console.error(`make: ${timeline} missing; run without --skip-voice first`); process.exit(2); }

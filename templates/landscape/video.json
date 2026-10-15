@@ -1,8 +1,13 @@
 {
-  "page": "video.html",
-  "lines": "lines-video.json",
-  "voice": { "provider": "hume" },
-  "poster": 0.6,
-  "maxSeconds": 0,
-  "workers": 4
+ "page": "video.html",
+ "lines": "lines-video.json",
+ "voice": {
+  "provider": "file",
+  "files": [
+   "narration.mp3"
+  ]
+ },
+ "poster": 0.6,
+ "maxSeconds": 0,
+ "workers": 4
 }

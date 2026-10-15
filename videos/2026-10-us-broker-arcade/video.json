@@ -1,8 +1,24 @@
 {
-  "page": "broker.html",
-  "lines": "lines-broker.json",
-  "voice": { "provider": "minimax" },
-  "poster": 3,
-  "maxSeconds": 0,
-  "workers": 4
+ "page": "broker.html",
+ "lines": "lines-broker.json",
+ "voice": {
+  "provider": "api",
+  "url": "https://api.aimlapi.com/v1/tts",
+  "keyEnv": "AIML_API_KEY",
+  "model": "minimax/speech-2.8-hd",
+  "params": {
+   "voice_setting": {
+    "voice_id": "Wise_Woman",
+    "emotion": "happy",
+    "speed": 1.2
+   },
+   "language_boost": "Chinese",
+   "audio_setting": {
+    "format": "mp3"
+   }
+  }
+ },
+ "poster": 3,
+ "maxSeconds": 0,
+ "workers": 4
 }
